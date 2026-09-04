@@ -25,36 +25,36 @@ import { countries } from "@/data/countries";
 const recentActivities = [
   {
     icon: "✈️",
-    title: "Flight to London",
-    description: "JFK → LHR booked with ETH",
+    title: "London Itinerary",
+    description: "JFK → LHR reserved with ETH",
     time: "1 hour ago",
     type: "flight",
   },
   {
     icon: "🇯🇵",
-    title: "Japan Travel Guide",
-    description: "Explored transport and cultural norms",
+    title: "Japan Dossier",
+    description: "Transport and cultural brief reviewed",
     time: "2 hours ago",
     type: "travel",
   },
   {
     icon: "🏠",
-    title: "Apartment in Paris",
-    description: "Cozy 2BR Loft in Arts District saved",
+    title: "Parisian Retreat",
+    description: "Arts District loft shortlisted",
     time: "4 hours ago",
     type: "apartment",
   },
   {
     icon: "🚕",
-    title: "Ride-Hailing in Singapore",
-    description: "Got recommendations for Grab and local options",
+    title: "Singapore Transit",
+    description: "Local mobility options curated",
     time: "5 hours ago",
     type: "services",
   },
   {
     icon: "💬",
-    title: "Account Support",
-    description: "Password reset resolved automatically",
+    title: "Account Concierge",
+    description: "Credential reset handled seamlessly",
     time: "1 day ago",
     type: "support",
   },
@@ -64,37 +64,37 @@ const quickActions = [
   {
     href: "/travel-assistant",
     icon: Compass,
-    label: "Travel Guide",
-    description: "Get destination insights",
-    color: "#6C3CE1",
+    label: "Destination Guide",
+    description: "Curated travel insights",
+    color: "#3D2B5A",
   },
   {
     href: "/flights",
     icon: Plane,
-    label: "Book Flights",
-    description: "Search & pay with crypto",
-    color: "#4F46E5",
+    label: "Flight Reservations",
+    description: "Search & book with crypto",
+    color: "#5B4180",
   },
   {
     href: "/apartments",
     icon: Building2,
-    label: "Find Stays",
-    description: "Apartments worldwide",
-    color: "#F97316",
+    label: "Curated Stays",
+    description: "Handpicked accommodations",
+    color: "#C49A6C",
   },
   {
     href: "/services",
     icon: MapPin,
-    label: "Find Services",
-    description: "Local recommendations",
-    color: "#10B981",
+    label: "Local Directory",
+    description: "Vetted recommendations",
+    color: "#5D8A6E",
   },
   {
     href: "/support",
     icon: Headphones,
-    label: "Get Support",
-    description: "AI-powered help",
-    color: "#06B6D4",
+    label: "Concierge Desk",
+    description: "Dedicated AI support",
+    color: "#4A7C6F",
   },
 ];
 
@@ -103,7 +103,7 @@ export default function DashboardPage() {
   const country = countries.find((c) => c.code === currentCountry);
 
   return (
-    <AppShell title="Dashboard">
+    <AppShell title="Overview">
       <div className="p-6 space-y-6">
         <div
           className="rounded-2xl p-6 relative overflow-hidden"
@@ -114,17 +114,17 @@ export default function DashboardPage() {
           <div className="relative z-10">
             <div className="flex items-center gap-2 mb-2">
               <Sparkles className="h-5 w-5 text-white/80" />
-              <span className="text-sm font-medium text-white/80">Welcome back</span>
+              <span className="heritage-caption text-white/80">Welcome back</span>
             </div>
-            <h2 className="text-2xl font-bold text-white mb-1">
-              Good {new Date().getHours() < 12 ? "morning" : new Date().getHours() < 18 ? "afternoon" : "evening"}!
+            <h2 className="heritage-heading text-2xl font-bold text-white mb-1">
+              Good {new Date().getHours() < 12 ? "morning" : new Date().getHours() < 18 ? "afternoon" : "evening"}.
             </h2>
             <p className="text-white/70 max-w-lg">
-              Your AI travel companion is ready. Currently configured for{" "}
+              Your travel companion is ready. Currently configured for{" "}
               <span className="font-semibold text-white">
                 {country?.flag} {country?.name}
               </span>
-              . Ask anything about your destination or explore local services.
+              . Ask anything about your destination or explore curated local services.
             </p>
             <div className="flex flex-wrap gap-3 mt-5">
               {quickActions.map((action) => (
@@ -157,7 +157,7 @@ export default function DashboardPage() {
             iconBg="var(--kv-primary)15"
           />
           <StatCard
-            label="Countries Explored"
+            label="Destinations Explored"
             value="8"
             change="+2 this month"
             changeType="positive"
@@ -165,7 +165,7 @@ export default function DashboardPage() {
             iconBg="var(--kv-secondary)15"
           />
           <StatCard
-            label="Services Found"
+            label="Services Curated"
             value="34"
             change="Across 6 categories"
             changeType="neutral"
@@ -194,7 +194,7 @@ export default function DashboardPage() {
               className="flex items-center justify-between border-b px-5 py-4"
               style={{ borderColor: "var(--kv-border)" }}
             >
-              <h3 className="font-semibold" style={{ color: "var(--kv-text)" }}>
+              <h3 className="heritage-heading font-semibold" style={{ color: "var(--kv-text)" }}>
                 Recent Activity
               </h3>
               <button
@@ -253,7 +253,7 @@ export default function DashboardPage() {
               className="border-b px-5 py-4"
               style={{ borderColor: "var(--kv-border)" }}
             >
-              <h3 className="font-semibold" style={{ color: "var(--kv-text)" }}>
+              <h3 className="heritage-heading font-semibold" style={{ color: "var(--kv-text)" }}>
                 Quick Explore
               </h3>
               <p className="text-xs mt-0.5" style={{ color: "var(--kv-text-secondary)" }}>

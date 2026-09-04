@@ -27,7 +27,7 @@ export default function Header({ title }: { title: string }) {
       }}
     >
       <div className="flex items-center gap-4">
-        <h1 className="text-lg font-semibold" style={{ color: "var(--kv-text)" }}>
+        <h1 className="heritage-heading text-lg font-semibold" style={{ color: "var(--kv-text)" }}>
           {title}
         </h1>
       </div>

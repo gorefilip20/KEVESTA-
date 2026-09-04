@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { searchFlights, getAirportSuggestions, airports } from "@/data/flights";
+import { fetchFlights, getAirportSuggestions, airports } from "@/lib/api/flights-client";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -27,6 +27,17 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const results = searchFlights(origin, destination, departDate, cabinClass, passengers);
-  return NextResponse.json({ flights: results, count: results.length });
+  const { flights, source } = await fetchFlights(
+    origin,
+    destination,
+    departDate,
+    cabinClass,
+    passengers
+  );
+
+  return NextResponse.json({
+    flights,
+    count: flights.length,
+    source,
+  });
 }

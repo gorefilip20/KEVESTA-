@@ -12,9 +12,9 @@ import { generateId } from "@/lib/utils";
 import type { Message, ServiceRecommendation } from "@/types";
 
 const suggestions = [
-  "Best ride-hailing apps here?",
-  "Find me accommodation",
-  "Food delivery options?",
+  "Best ride-hailing services here?",
+  "Curate accommodation options",
+  "Local dining and delivery?",
   "Recommend a digital bank",
 ];
 
@@ -144,17 +144,17 @@ export default function ServicesPage() {
   );
 
   return (
-    <AppShell title="Local Services">
+    <AppShell title="Local Directory">
       <div className="flex h-[calc(100vh-4rem)]">
         <div className="flex-1 overflow-y-auto p-6">
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-xl font-bold" style={{ color: "var(--kv-text)" }}>
-                  Services in {country?.flag} {country?.name}
+                <h2 className="heritage-heading text-xl font-bold" style={{ color: "var(--kv-text)" }}>
+                  Local Directory &mdash; {country?.flag} {country?.name}
                 </h2>
                 <p className="text-sm mt-1" style={{ color: "var(--kv-text-secondary)" }}>
-                  {countryServices.length} services available in your area
+                  {countryServices.length} curated services for your destination
                 </p>
               </div>
               <button
@@ -163,7 +163,7 @@ export default function ServicesPage() {
                 style={{ background: "var(--kv-secondary)" }}
               >
                 <MapPin className="h-4 w-4" />
-                {showChat ? "Browse Services" : "Ask AI"}
+                {showChat ? "Browse Directory" : "Ask the Guide"}
               </button>
             </div>
 
@@ -180,7 +180,7 @@ export default function ServicesPage() {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search services..."
+                  placeholder="Search the directory..."
                   className="flex-1 bg-transparent text-sm outline-none"
                   style={{ color: "var(--kv-text)" }}
                 />

@@ -18,41 +18,41 @@ import {
 const features = [
   {
     icon: Compass,
-    title: "AI Travel Assistant",
+    title: "Destination Intelligence",
     description:
-      "Get personalized travel guidance covering transport, payments, cultural norms, safety, and local services for any destination.",
-    color: "#6C3CE1",
+      "Expert-curated travel guidance spanning transport, payments, cultural etiquette, safety protocols, and essential local services for every destination.",
+    color: "#3D2B5A",
   },
   {
     icon: MapPin,
-    title: "Local Services Recommender",
+    title: "Curated Local Directory",
     description:
-      "Discover the best ride-hailing, accommodation, food delivery, and financial services tailored to your location and preferences.",
-    color: "#F97316",
+      "Handpicked recommendations for ride-hailing, accommodation, dining, and financial services, refined to match your location and personal preferences.",
+    color: "#C49A6C",
   },
   {
     icon: Headphones,
-    title: "Smart Support",
+    title: "Concierge & Resolution",
     description:
-      "AI-powered complaint resolution with sentiment analysis, automated fixes for common issues, and intelligent escalation when needed.",
-    color: "#06B6D4",
+      "Thoughtful AI-powered complaint resolution with sentiment analysis, automated remediation, and intelligent escalation when personal attention is warranted.",
+    color: "#4A7C6F",
   },
 ];
 
 const stats = [
-  { value: "20+", label: "Countries Covered" },
-  { value: "50+", label: "Service Partners" },
-  { value: "99.5%", label: "Response Accuracy" },
-  { value: "< 2s", label: "Response Time" },
+  { value: "20+", label: "Destinations Curated" },
+  { value: "50+", label: "Vetted Partners" },
+  { value: "99.5%", label: "Response Fidelity" },
+  { value: "< 2s", label: "Response Cadence" },
 ];
 
 const capabilities = [
-  "Context-aware destination detection",
-  "RAG-powered factual responses",
-  "Multi-language support",
-  "NLP sentiment analysis",
-  "Smart service matching",
-  "GDPR/CCPA compliant",
+  "Contextual destination awareness",
+  "RAG-verified factual responses",
+  "Multi-language fluency",
+  "Sentiment-aware support",
+  "Precision service matching",
+  "GDPR & CCPA adherent",
 ];
 
 export default function LandingPage() {
@@ -82,13 +82,16 @@ export default function LandingPage() {
             >
               <Globe className="h-5 w-5 text-white" />
             </div>
-            <span className="text-lg font-bold" style={{ color: "var(--kv-text)" }}>
+            <span
+              className="heritage-heading text-lg font-semibold tracking-wide"
+              style={{ color: "var(--kv-text)" }}
+            >
               KEVESTA
             </span>
           </Link>
 
           <nav className="hidden md:flex items-center gap-8">
-            {["Features", "How It Works", "About"].map((item) => (
+            {["Features", "Architecture", "About"].map((item) => (
               <a
                 key={item}
                 href={`#${item.toLowerCase().replace(/\s+/g, "-")}`}
@@ -125,7 +128,7 @@ export default function LandingPage() {
           className="absolute inset-0 opacity-30"
           style={{
             background:
-              "radial-gradient(ellipse 80% 60% at 50% 0%, rgba(108,60,225,0.15) 0%, transparent 60%)",
+              "radial-gradient(ellipse 80% 60% at 50% 0%, rgba(61,43,90,0.15) 0%, transparent 60%)",
           }}
         />
         <div className="relative mx-auto max-w-7xl px-6 text-center">
@@ -136,17 +139,17 @@ export default function LandingPage() {
               background: "var(--kv-surface)",
             }}
           >
-            <Sparkles className="h-4 w-4" style={{ color: "var(--kv-primary)" }} />
-            <span className="text-sm font-medium" style={{ color: "var(--kv-text-secondary)" }}>
-              AI-Powered Travel Intelligence
+            <Sparkles className="h-4 w-4" style={{ color: "var(--kv-secondary)" }} />
+            <span className="heritage-caption" style={{ color: "var(--kv-text-secondary)" }}>
+              Editorial Travel Intelligence
             </span>
           </div>
 
           <h1
-            className="mx-auto max-w-4xl text-5xl font-bold leading-tight tracking-tight md:text-6xl lg:text-7xl"
+            className="heritage-heading mx-auto max-w-4xl text-5xl font-bold leading-tight tracking-tight md:text-6xl lg:text-7xl"
             style={{ color: "var(--kv-text)" }}
           >
-            Your AI Guide to{" "}
+            Your Companion for{" "}
             <span
               style={{
                 background: "linear-gradient(135deg, var(--kv-primary), var(--kv-secondary))",
@@ -154,18 +157,18 @@ export default function LandingPage() {
                 WebkitTextFillColor: "transparent",
               }}
             >
-              Anywhere
+              Every
             </span>{" "}
-            in the World
+            Destination
           </h1>
 
           <p
             className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed"
             style={{ color: "var(--kv-text-secondary)" }}
           >
-            Kevesta combines intelligent travel guidance, local service
-            recommendations, and smart support into one seamless AI assistant.
-            Navigate any country with confidence.
+            Kevesta weaves together intelligent travel guidance, curated local
+            recommendations, and dedicated concierge support into one refined AI
+            assistant. Navigate any country with clarity and confidence.
           </p>
 
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
@@ -174,10 +177,10 @@ export default function LandingPage() {
               className="inline-flex items-center gap-2 rounded-xl px-8 py-3.5 text-base font-semibold text-white transition-all hover:opacity-90 shadow-lg"
               style={{
                 background: "var(--kv-primary)",
-                boxShadow: "0 4px 20px rgba(108,60,225,0.3)",
+                boxShadow: "0 4px 20px rgba(61,43,90,0.3)",
               }}
             >
-              Start Exploring
+              Begin Your Journey
               <ArrowRight className="h-5 w-5" />
             </Link>
             <Link
@@ -188,7 +191,7 @@ export default function LandingPage() {
                 color: "var(--kv-text)",
               }}
             >
-              Try AI Assistant
+              Meet the Guide
               <ChevronRight className="h-5 w-5" />
             </Link>
           </div>
@@ -197,7 +200,7 @@ export default function LandingPage() {
             {stats.map((stat) => (
               <div key={stat.label}>
                 <p
-                  className="text-3xl font-bold"
+                  className="heritage-heading text-3xl font-bold"
                   style={{ color: "var(--kv-primary)" }}
                 >
                   {stat.value}
@@ -214,18 +217,24 @@ export default function LandingPage() {
       <section id="features" className="py-24" style={{ background: "var(--kv-bg-secondary)" }}>
         <div className="mx-auto max-w-7xl px-6">
           <div className="text-center">
+            <p
+              className="heritage-caption mb-3"
+              style={{ color: "var(--kv-secondary)" }}
+            >
+              Core Modules
+            </p>
             <h2
-              className="text-3xl font-bold md:text-4xl"
+              className="heritage-heading text-3xl font-bold md:text-4xl"
               style={{ color: "var(--kv-text)" }}
             >
-              Everything You Need, One Platform
+              Three Pillars, One Platform
             </h2>
             <p
               className="mx-auto mt-4 max-w-2xl text-lg"
               style={{ color: "var(--kv-text-secondary)" }}
             >
-              Three powerful AI modules working together to make your travel and
-              relocation experience seamless.
+              Three focused AI modules working in concert to make your travel and
+              relocation experience seamless and considered.
             </p>
           </div>
 
@@ -245,7 +254,10 @@ export default function LandingPage() {
                 >
                   <feature.icon className="h-7 w-7" style={{ color: feature.color }} />
                 </div>
-                <h3 className="text-xl font-semibold" style={{ color: "var(--kv-text)" }}>
+                <h3
+                  className="heritage-heading text-xl font-semibold"
+                  style={{ color: "var(--kv-text)" }}
+                >
                   {feature.title}
                 </h3>
                 <p
@@ -259,7 +271,7 @@ export default function LandingPage() {
                   className="mt-5 inline-flex items-center gap-1 text-sm font-medium transition-colors"
                   style={{ color: feature.color }}
                 >
-                  Learn more
+                  Explore
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
@@ -268,21 +280,27 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="how-it-works" className="py-24">
+      <section id="architecture" className="py-24">
         <div className="mx-auto max-w-7xl px-6">
           <div className="text-center">
+            <p
+              className="heritage-caption mb-3"
+              style={{ color: "var(--kv-secondary)" }}
+            >
+              Under the Hood
+            </p>
             <h2
-              className="text-3xl font-bold md:text-4xl"
+              className="heritage-heading text-3xl font-bold md:text-4xl"
               style={{ color: "var(--kv-text)" }}
             >
-              Powered by Advanced AI
+              Refined by Intelligent Architecture
             </h2>
             <p
               className="mx-auto mt-4 max-w-2xl text-lg"
               style={{ color: "var(--kv-text-secondary)" }}
             >
-              Built on a robust technical architecture designed for accuracy,
-              security, and scale.
+              Built on a robust technical foundation designed for accuracy,
+              security, and scale across international markets.
             </p>
           </div>
 
@@ -300,7 +318,10 @@ export default function LandingPage() {
               >
                 <Zap className="h-6 w-6" style={{ color: "var(--kv-primary)" }} />
               </div>
-              <h3 className="text-lg font-semibold" style={{ color: "var(--kv-text)" }}>
+              <h3
+                className="heritage-heading text-lg font-semibold"
+                style={{ color: "var(--kv-text)" }}
+              >
                 LLM Core + RAG
               </h3>
               <p className="mt-2 text-sm" style={{ color: "var(--kv-text-secondary)" }}>
@@ -323,11 +344,14 @@ export default function LandingPage() {
               >
                 <Globe className="h-6 w-6" style={{ color: "var(--kv-accent)" }} />
               </div>
-              <h3 className="text-lg font-semibold" style={{ color: "var(--kv-text)" }}>
+              <h3
+                className="heritage-heading text-lg font-semibold"
+                style={{ color: "var(--kv-text)" }}
+              >
                 Country-Specific Knowledge
               </h3>
               <p className="mt-2 text-sm" style={{ color: "var(--kv-text-secondary)" }}>
-                Dynamic prompts adapt to your geographic context, pulling from
+                Dynamic prompts adapt to your geographic context, drawing from
                 structured databases of local regulations, cultural norms, and
                 service availability.
               </p>
@@ -346,11 +370,14 @@ export default function LandingPage() {
               >
                 <Shield className="h-6 w-6" style={{ color: "var(--kv-success)" }} />
               </div>
-              <h3 className="text-lg font-semibold" style={{ color: "var(--kv-text)" }}>
+              <h3
+                className="heritage-heading text-lg font-semibold"
+                style={{ color: "var(--kv-text)" }}
+              >
                 Security & Compliance
               </h3>
               <p className="mt-2 text-sm" style={{ color: "var(--kv-text-secondary)" }}>
-                End-to-end encryption, GDPR/CCPA compliance, and a modular
+                End-to-end encryption, GDPR and CCPA compliance, and a modular
                 microservices architecture built to scale across international
                 markets.
               </p>
@@ -379,12 +406,12 @@ export default function LandingPage() {
 
       <section className="py-20" style={{ background: "var(--kv-sidebar-bg)" }}>
         <div className="mx-auto max-w-4xl px-6 text-center">
-          <h2 className="text-3xl font-bold text-white md:text-4xl">
-            Ready to Navigate the World?
+          <h2 className="heritage-heading text-3xl font-bold text-white md:text-4xl">
+            Your Next Chapter Begins Here
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-lg text-white/70">
-            Join thousands of travelers and expats who use Kevesta to make
-            informed decisions in new destinations.
+            Join thousands of travelers and expats who trust Kevesta to make
+            informed, confident decisions in new destinations.
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
             <Link
@@ -392,7 +419,7 @@ export default function LandingPage() {
               className="inline-flex items-center gap-2 rounded-xl px-8 py-3.5 text-base font-semibold text-white transition-all hover:opacity-90"
               style={{
                 background: "var(--kv-primary)",
-                boxShadow: "0 4px 20px rgba(108,60,225,0.4)",
+                boxShadow: "0 4px 20px rgba(61,43,90,0.4)",
               }}
             >
               Get Started Free
@@ -418,7 +445,10 @@ export default function LandingPage() {
               >
                 <Globe className="h-4 w-4 text-white" />
               </div>
-              <span className="text-sm font-bold" style={{ color: "var(--kv-text)" }}>
+              <span
+                className="heritage-heading text-sm font-semibold tracking-wide"
+                style={{ color: "var(--kv-text)" }}
+              >
                 KEVESTA
               </span>
             </div>

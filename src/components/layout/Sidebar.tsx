@@ -19,12 +19,12 @@ import { useAppStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/travel-assistant", label: "Travel Assistant", icon: Compass },
+  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
+  { href: "/travel-assistant", label: "Destinations", icon: Compass },
   { href: "/flights", label: "Flights", icon: Plane },
-  { href: "/apartments", label: "Apartments", icon: Building2 },
-  { href: "/services", label: "Local Services", icon: MapPin },
-  { href: "/support", label: "Support", icon: Headphones },
+  { href: "/apartments", label: "Stays", icon: Building2 },
+  { href: "/services", label: "Local Directory", icon: MapPin },
+  { href: "/support", label: "Concierge", icon: Headphones },
 ];
 
 const bottomItems = [
@@ -52,7 +52,7 @@ export default function Sidebar() {
             <Globe className="h-5 w-5 text-white" />
           </div>
           {sidebarOpen && (
-            <span className="text-lg font-bold text-white tracking-tight">
+            <span className="heritage-heading text-lg font-semibold text-white tracking-wide">
               KEVESTA
             </span>
           )}
@@ -73,8 +73,8 @@ export default function Sidebar() {
         <div className="mx-4 mb-4 rounded-xl p-3" style={{ background: "var(--kv-sidebar-hover)" }}>
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4" style={{ color: "var(--kv-secondary)" }} />
-            <span className="text-xs font-medium" style={{ color: "var(--kv-sidebar-text)" }}>
-              AI-Powered Assistant
+            <span className="heritage-caption text-white/70" style={{ fontSize: "0.65rem" }}>
+              Travel Companion
             </span>
           </div>
         </div>
