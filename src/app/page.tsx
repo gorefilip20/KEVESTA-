@@ -1,69 +1,445 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import Link from "next/link";
+import { useState, useEffect } from "react";
+import {
+  Globe,
+  Compass,
+  MapPin,
+  Headphones,
+  ArrowRight,
+  Sparkles,
+  Shield,
+  Zap,
+  ChevronRight,
+  Check,
+} from "lucide-react";
+
+const features = [
+  {
+    icon: Compass,
+    title: "AI Travel Assistant",
+    description:
+      "Get personalized travel guidance covering transport, payments, cultural norms, safety, and local services for any destination.",
+    color: "#6C3CE1",
+  },
+  {
+    icon: MapPin,
+    title: "Local Services Recommender",
+    description:
+      "Discover the best ride-hailing, accommodation, food delivery, and financial services tailored to your location and preferences.",
+    color: "#F97316",
+  },
+  {
+    icon: Headphones,
+    title: "Smart Support",
+    description:
+      "AI-powered complaint resolution with sentiment analysis, automated fixes for common issues, and intelligent escalation when needed.",
+    color: "#06B6D4",
+  },
+];
+
+const stats = [
+  { value: "20+", label: "Countries Covered" },
+  { value: "50+", label: "Service Partners" },
+  { value: "99.5%", label: "Response Accuracy" },
+  { value: "< 2s", label: "Response Time" },
+];
+
+const capabilities = [
+  "Context-aware destination detection",
+  "RAG-powered factual responses",
+  "Multi-language support",
+  "NLP sentiment analysis",
+  "Smart service matching",
+  "GDPR/CCPA compliant",
+];
+
+export default function LandingPage() {
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handler = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", handler);
+    return () => window.removeEventListener("scroll", handler);
+  }, []);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div style={{ background: "var(--kv-bg)" }}>
+      <header
+        className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
+        style={{
+          background: scrolled ? "var(--kv-bg)" : "transparent",
+          borderBottom: scrolled ? "1px solid var(--kv-border)" : "none",
+          boxShadow: scrolled ? "var(--kv-shadow)" : "none",
+        }}
+      >
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
+          <Link href="/" className="flex items-center gap-2.5">
+            <div
+              className="flex h-9 w-9 items-center justify-center rounded-xl"
+              style={{ background: "var(--kv-primary)" }}
+            >
+              <Globe className="h-5 w-5 text-white" />
+            </div>
+            <span className="text-lg font-bold" style={{ color: "var(--kv-text)" }}>
+              KEVESTA
+            </span>
+          </Link>
+
+          <nav className="hidden md:flex items-center gap-8">
+            {["Features", "How It Works", "About"].map((item) => (
+              <a
+                key={item}
+                href={`#${item.toLowerCase().replace(/\s+/g, "-")}`}
+                className="text-sm font-medium transition-colors hover:opacity-70"
+                style={{ color: "var(--kv-text-secondary)" }}
+              >
+                {item}
+              </a>
+            ))}
+          </nav>
+
+          <div className="flex items-center gap-3">
+            <Link
+              href="/dashboard"
+              className="hidden sm:inline-flex rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+              style={{ color: "var(--kv-text)" }}
+            >
+              Sign In
+            </Link>
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90"
+              style={{ background: "var(--kv-primary)" }}
+            >
+              Get Started
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      <section className="relative overflow-hidden pt-32 pb-20">
+        <div
+          className="absolute inset-0 opacity-30"
+          style={{
+            background:
+              "radial-gradient(ellipse 80% 60% at 50% 0%, rgba(108,60,225,0.15) 0%, transparent 60%)",
+          }}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
+        <div className="relative mx-auto max-w-7xl px-6 text-center">
+          <div
+            className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border px-4 py-1.5"
+            style={{
+              borderColor: "var(--kv-border)",
+              background: "var(--kv-surface)",
+            }}
+          >
+            <Sparkles className="h-4 w-4" style={{ color: "var(--kv-primary)" }} />
+            <span className="text-sm font-medium" style={{ color: "var(--kv-text-secondary)" }}>
+              AI-Powered Travel Intelligence
+            </span>
+          </div>
+
+          <h1
+            className="mx-auto max-w-4xl text-5xl font-bold leading-tight tracking-tight md:text-6xl lg:text-7xl"
+            style={{ color: "var(--kv-text)" }}
+          >
+            Your AI Guide to{" "}
+            <span
+              style={{
+                background: "linear-gradient(135deg, var(--kv-primary), var(--kv-secondary))",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+              }}
+            >
+              Anywhere
+            </span>{" "}
+            in the World
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+
+          <p
+            className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed"
+            style={{ color: "var(--kv-text-secondary)" }}
+          >
+            Kevesta combines intelligent travel guidance, local service
+            recommendations, and smart support into one seamless AI assistant.
+            Navigate any country with confidence.
           </p>
+
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-2 rounded-xl px-8 py-3.5 text-base font-semibold text-white transition-all hover:opacity-90 shadow-lg"
+              style={{
+                background: "var(--kv-primary)",
+                boxShadow: "0 4px 20px rgba(108,60,225,0.3)",
+              }}
+            >
+              Start Exploring
+              <ArrowRight className="h-5 w-5" />
+            </Link>
+            <Link
+              href="/travel-assistant"
+              className="inline-flex items-center gap-2 rounded-xl border px-8 py-3.5 text-base font-semibold transition-all hover:shadow-md"
+              style={{
+                borderColor: "var(--kv-border)",
+                color: "var(--kv-text)",
+              }}
+            >
+              Try AI Assistant
+              <ChevronRight className="h-5 w-5" />
+            </Link>
+          </div>
+
+          <div className="mt-16 grid grid-cols-2 gap-8 md:grid-cols-4">
+            {stats.map((stat) => (
+              <div key={stat.label}>
+                <p
+                  className="text-3xl font-bold"
+                  style={{ color: "var(--kv-primary)" }}
+                >
+                  {stat.value}
+                </p>
+                <p className="mt-1 text-sm" style={{ color: "var(--kv-text-secondary)" }}>
+                  {stat.label}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </section>
+
+      <section id="features" className="py-24" style={{ background: "var(--kv-bg-secondary)" }}>
+        <div className="mx-auto max-w-7xl px-6">
+          <div className="text-center">
+            <h2
+              className="text-3xl font-bold md:text-4xl"
+              style={{ color: "var(--kv-text)" }}
+            >
+              Everything You Need, One Platform
+            </h2>
+            <p
+              className="mx-auto mt-4 max-w-2xl text-lg"
+              style={{ color: "var(--kv-text-secondary)" }}
+            >
+              Three powerful AI modules working together to make your travel and
+              relocation experience seamless.
+            </p>
+          </div>
+
+          <div className="mt-16 grid gap-8 md:grid-cols-3">
+            {features.map((feature) => (
+              <div
+                key={feature.title}
+                className="group rounded-2xl border p-8 transition-all hover:shadow-lg"
+                style={{
+                  background: "var(--kv-surface)",
+                  borderColor: "var(--kv-border)",
+                }}
+              >
+                <div
+                  className="mb-5 flex h-14 w-14 items-center justify-center rounded-xl"
+                  style={{ background: feature.color + "15" }}
+                >
+                  <feature.icon className="h-7 w-7" style={{ color: feature.color }} />
+                </div>
+                <h3 className="text-xl font-semibold" style={{ color: "var(--kv-text)" }}>
+                  {feature.title}
+                </h3>
+                <p
+                  className="mt-3 text-sm leading-relaxed"
+                  style={{ color: "var(--kv-text-secondary)" }}
+                >
+                  {feature.description}
+                </p>
+                <Link
+                  href="/dashboard"
+                  className="mt-5 inline-flex items-center gap-1 text-sm font-medium transition-colors"
+                  style={{ color: feature.color }}
+                >
+                  Learn more
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+            ))}
+          </div>
         </div>
-      </main>
+      </section>
+
+      <section id="how-it-works" className="py-24">
+        <div className="mx-auto max-w-7xl px-6">
+          <div className="text-center">
+            <h2
+              className="text-3xl font-bold md:text-4xl"
+              style={{ color: "var(--kv-text)" }}
+            >
+              Powered by Advanced AI
+            </h2>
+            <p
+              className="mx-auto mt-4 max-w-2xl text-lg"
+              style={{ color: "var(--kv-text-secondary)" }}
+            >
+              Built on a robust technical architecture designed for accuracy,
+              security, and scale.
+            </p>
+          </div>
+
+          <div className="mt-16 grid gap-6 md:grid-cols-3">
+            <div
+              className="rounded-2xl border p-8"
+              style={{
+                background: "var(--kv-surface)",
+                borderColor: "var(--kv-border)",
+              }}
+            >
+              <div
+                className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl"
+                style={{ background: "var(--kv-primary)" + "15" }}
+              >
+                <Zap className="h-6 w-6" style={{ color: "var(--kv-primary)" }} />
+              </div>
+              <h3 className="text-lg font-semibold" style={{ color: "var(--kv-text)" }}>
+                LLM Core + RAG
+              </h3>
+              <p className="mt-2 text-sm" style={{ color: "var(--kv-text-secondary)" }}>
+                Retrieval-Augmented Generation grounds every response in verified
+                data, eliminating hallucinations and ensuring factual accuracy
+                for country-specific guidance.
+              </p>
+            </div>
+
+            <div
+              className="rounded-2xl border p-8"
+              style={{
+                background: "var(--kv-surface)",
+                borderColor: "var(--kv-border)",
+              }}
+            >
+              <div
+                className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl"
+                style={{ background: "var(--kv-accent)" + "15" }}
+              >
+                <Globe className="h-6 w-6" style={{ color: "var(--kv-accent)" }} />
+              </div>
+              <h3 className="text-lg font-semibold" style={{ color: "var(--kv-text)" }}>
+                Country-Specific Knowledge
+              </h3>
+              <p className="mt-2 text-sm" style={{ color: "var(--kv-text-secondary)" }}>
+                Dynamic prompts adapt to your geographic context, pulling from
+                structured databases of local regulations, cultural norms, and
+                service availability.
+              </p>
+            </div>
+
+            <div
+              className="rounded-2xl border p-8"
+              style={{
+                background: "var(--kv-surface)",
+                borderColor: "var(--kv-border)",
+              }}
+            >
+              <div
+                className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl"
+                style={{ background: "var(--kv-success)" + "15" }}
+              >
+                <Shield className="h-6 w-6" style={{ color: "var(--kv-success)" }} />
+              </div>
+              <h3 className="text-lg font-semibold" style={{ color: "var(--kv-text)" }}>
+                Security & Compliance
+              </h3>
+              <p className="mt-2 text-sm" style={{ color: "var(--kv-text-secondary)" }}>
+                End-to-end encryption, GDPR/CCPA compliance, and a modular
+                microservices architecture built to scale across international
+                markets.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-12 flex flex-wrap justify-center gap-4">
+            {capabilities.map((cap) => (
+              <div
+                key={cap}
+                className="flex items-center gap-2 rounded-full border px-4 py-2"
+                style={{
+                  borderColor: "var(--kv-border)",
+                  background: "var(--kv-surface)",
+                }}
+              >
+                <Check className="h-4 w-4" style={{ color: "var(--kv-success)" }} />
+                <span className="text-sm" style={{ color: "var(--kv-text)" }}>
+                  {cap}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="py-20" style={{ background: "var(--kv-sidebar-bg)" }}>
+        <div className="mx-auto max-w-4xl px-6 text-center">
+          <h2 className="text-3xl font-bold text-white md:text-4xl">
+            Ready to Navigate the World?
+          </h2>
+          <p className="mx-auto mt-4 max-w-xl text-lg text-white/70">
+            Join thousands of travelers and expats who use Kevesta to make
+            informed decisions in new destinations.
+          </p>
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-2 rounded-xl px-8 py-3.5 text-base font-semibold text-white transition-all hover:opacity-90"
+              style={{
+                background: "var(--kv-primary)",
+                boxShadow: "0 4px 20px rgba(108,60,225,0.4)",
+              }}
+            >
+              Get Started Free
+              <ArrowRight className="h-5 w-5" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <footer
+        className="border-t py-12"
+        style={{
+          background: "var(--kv-bg)",
+          borderColor: "var(--kv-border)",
+        }}
+      >
+        <div className="mx-auto max-w-7xl px-6">
+          <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
+            <div className="flex items-center gap-2.5">
+              <div
+                className="flex h-8 w-8 items-center justify-center rounded-lg"
+                style={{ background: "var(--kv-primary)" }}
+              >
+                <Globe className="h-4 w-4 text-white" />
+              </div>
+              <span className="text-sm font-bold" style={{ color: "var(--kv-text)" }}>
+                KEVESTA
+              </span>
+            </div>
+            <div className="flex gap-8">
+              {["Privacy", "Terms", "Contact", "Help"].map((item) => (
+                <a
+                  key={item}
+                  href="#"
+                  className="text-sm transition-colors hover:opacity-70"
+                  style={{ color: "var(--kv-text-secondary)" }}
+                >
+                  {item}
+                </a>
+              ))}
+            </div>
+            <p className="text-sm" style={{ color: "var(--kv-text-tertiary)" }}>
+              &copy; {new Date().getFullYear()} Kevesta. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
