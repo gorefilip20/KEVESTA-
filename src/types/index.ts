@@ -103,3 +103,103 @@ export interface DashboardStats {
   ticketsResolved: number;
   satisfactionRate: number;
 }
+
+export interface Airport {
+  code: string;
+  name: string;
+  city: string;
+  country: string;
+}
+
+export interface FlightSearchParams {
+  origin: string;
+  destination: string;
+  departDate: string;
+  returnDate?: string;
+  passengers: number;
+  cabinClass: "economy" | "premium_economy" | "business" | "first";
+  tripType: "one_way" | "round_trip";
+}
+
+export interface FlightResult {
+  id: string;
+  airline: string;
+  airlineLogo: string;
+  flightNumber: string;
+  origin: Airport;
+  destination: Airport;
+  departureTime: string;
+  arrivalTime: string;
+  duration: string;
+  stops: number;
+  stopCities?: string[];
+  price: number;
+  currency: string;
+  cabinClass: string;
+  seatsLeft?: number;
+  baggage: string;
+  aircraft?: string;
+}
+
+export interface Apartment {
+  id: string;
+  title: string;
+  location: string;
+  city: string;
+  country: string;
+  price: number;
+  currency: string;
+  priceUnit: "night" | "week" | "month";
+  images: string[];
+  bedrooms: number;
+  bathrooms: number;
+  maxGuests: number;
+  sqft: number;
+  amenities: string[];
+  rating: number;
+  reviewCount: number;
+  host: {
+    name: string;
+    verified: boolean;
+    responseRate: number;
+  };
+  safetyRating: number;
+  neighborhood: string;
+  description: string;
+  availableFrom: string;
+  availableTo: string;
+  instantBook: boolean;
+  featured?: boolean;
+}
+
+export interface CryptoWallet {
+  currency: string;
+  symbol: string;
+  network: string;
+  icon: string;
+  balance?: number;
+  address?: string;
+}
+
+export interface PaymentTransaction {
+  id: string;
+  type: "flight" | "apartment";
+  itemId: string;
+  itemTitle: string;
+  amount: number;
+  currency: string;
+  cryptoCurrency: string;
+  cryptoAmount: number;
+  walletAddress: string;
+  status: "pending" | "confirming" | "confirmed" | "failed";
+  txHash?: string;
+  createdAt: Date;
+  confirmedAt?: Date;
+}
+
+export interface CheckoutState {
+  step: "select_crypto" | "connect_wallet" | "confirm" | "processing" | "complete";
+  selectedCrypto: string | null;
+  walletConnected: boolean;
+  transaction: PaymentTransaction | null;
+}

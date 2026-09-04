@@ -14,6 +14,8 @@ import {
   Users,
   Clock,
   Sparkles,
+  Plane,
+  Building2,
 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import StatCard from "@/components/ui/StatCard";
@@ -22,11 +24,25 @@ import { countries } from "@/data/countries";
 
 const recentActivities = [
   {
+    icon: "✈️",
+    title: "Flight to London",
+    description: "JFK → LHR booked with ETH",
+    time: "1 hour ago",
+    type: "flight",
+  },
+  {
     icon: "🇯🇵",
     title: "Japan Travel Guide",
     description: "Explored transport and cultural norms",
     time: "2 hours ago",
     type: "travel",
+  },
+  {
+    icon: "🏠",
+    title: "Apartment in Paris",
+    description: "Cozy 2BR Loft in Arts District saved",
+    time: "4 hours ago",
+    type: "apartment",
   },
   {
     icon: "🚕",
@@ -42,13 +58,6 @@ const recentActivities = [
     time: "1 day ago",
     type: "support",
   },
-  {
-    icon: "🇩🇪",
-    title: "Germany Relocation",
-    description: "Banking and registration information",
-    time: "2 days ago",
-    type: "travel",
-  },
 ];
 
 const quickActions = [
@@ -60,11 +69,25 @@ const quickActions = [
     color: "#6C3CE1",
   },
   {
+    href: "/flights",
+    icon: Plane,
+    label: "Book Flights",
+    description: "Search & pay with crypto",
+    color: "#4F46E5",
+  },
+  {
+    href: "/apartments",
+    icon: Building2,
+    label: "Find Stays",
+    description: "Apartments worldwide",
+    color: "#F97316",
+  },
+  {
     href: "/services",
     icon: MapPin,
     label: "Find Services",
     description: "Local recommendations",
-    color: "#F97316",
+    color: "#10B981",
   },
   {
     href: "/support",
@@ -275,7 +298,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {quickActions.map((action) => (
             <Link
               key={action.href}

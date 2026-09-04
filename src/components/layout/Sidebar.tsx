@@ -12,6 +12,8 @@ import {
   ChevronRight,
   Globe,
   Sparkles,
+  Plane,
+  Building2,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -19,6 +21,8 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/travel-assistant", label: "Travel Assistant", icon: Compass },
+  { href: "/flights", label: "Flights", icon: Plane },
+  { href: "/apartments", label: "Apartments", icon: Building2 },
   { href: "/services", label: "Local Services", icon: MapPin },
   { href: "/support", label: "Support", icon: Headphones },
 ];
