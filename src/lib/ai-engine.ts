@@ -130,6 +130,13 @@ export async function generateTravelResponse(
     response += `\n\n---\n*📍 Based on verified data for ${country?.name}. Last updated: ${new Date().toLocaleDateString()}*`;
   }
 
+  if (conversationHistory.length > 0) {
+    const lastUser = [...conversationHistory].reverse().find((m) => m.role === "user");
+    if (lastUser) {
+      response += `\n*(Following up on your earlier question: "${lastUser.content.slice(0, 80)}")*`;
+    }
+  }
+
   return {
     id: generateId(),
     role: "assistant",
@@ -222,7 +229,11 @@ export async function generateSupportResponse(
     } else if (sentiment === "negative") {
       response = `**💬 Support Response**\n\nI'm sorry to hear about this issue. I want to help get this sorted out for you.\n\nBased on your description, here's what I recommend:\n\n1. Let me check if there's a known issue related to your concern\n2. If this requires specialized assistance, I'll connect you with our team who can take a closer look\n3. I'll make sure all context is preserved so you don't have to repeat anything\n\nCould you provide a few more details so I can find the best solution?`;
     } else {
-      response = `**💬 Support Response**\n\nThanks for reaching out! I'm here to help.\n\nBased on your question, here's what I can share:\n\n• I've reviewed your account and recent activity\n• Let me look into the specifics of your request\n\nCould you tell me a bit more about what you're experiencing? That way I can provide the most accurate help.`;
+      const historyNote =
+        conversationHistory.length > 0
+          ? `\n\nI can see ${conversationHistory.length} previous message${conversationHistory.length > 1 ? "s" : ""} in this conversation, so I have context on what we've discussed.`
+          : "";
+      response = `**💬 Support Response**${historyNote}\n\nThanks for reaching out! I'm here to help.\n\nBased on your question, here's what I can share:\n\n• I've reviewed your account and recent activity\n• Let me look into the specifics of your request\n\nCould you tell me a bit more about what you're experiencing? That way I can provide the most accurate help.`;
     }
   }
 
