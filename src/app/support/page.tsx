@@ -2,7 +2,6 @@
 
 import { useState, useCallback } from "react";
 import {
-  Headphones,
   AlertCircle,
   CheckCircle,
   Clock,
@@ -10,7 +9,6 @@ import {
   Zap,
   Shield,
   Brain,
-  MessageCircle,
 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import ChatInterface from "@/components/chat/ChatInterface";
