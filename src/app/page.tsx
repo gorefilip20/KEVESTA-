@@ -11,6 +11,9 @@ import {
   Sparkles,
   Shield,
   Zap,
+  Car,
+  CreditCard,
+  ShieldCheck,
   ChevronRight,
   Check,
 } from "lucide-react";
@@ -123,20 +126,29 @@ export default function LandingPage() {
         </div>
       </header>
 
-      <section className="relative overflow-hidden pt-32 pb-20">
-        <div
-          className="absolute inset-0 opacity-30"
-          style={{
-            background:
-              "radial-gradient(ellipse 80% 60% at 50% 0%, rgba(61,43,90,0.15) 0%, transparent 60%)",
-          }}
-        />
+      <section className="relative overflow-hidden pt-32 pb-24">
+        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+          <div
+            className="absolute -top-40 left-1/2 h-[34rem] w-[54rem] -translate-x-1/2 rounded-full opacity-25 blur-3xl"
+            style={{ background: "radial-gradient(closest-side, #3D2B5A, transparent 70%)" }}
+          />
+          <div
+            className="absolute right-[6%] top-24 h-72 w-72 rounded-full opacity-20 blur-3xl"
+            style={{ background: "radial-gradient(closest-side, #C49A6C, transparent 70%)" }}
+          />
+          <div
+            className="absolute left-[4%] top-64 h-80 w-80 rounded-full opacity-15 blur-3xl"
+            style={{ background: "radial-gradient(closest-side, #4A7C6F, transparent 70%)" }}
+          />
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(196,154,108,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(196,154,108,0.06)_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_70%_60%_at_50%_0%,#000_30%,transparent_75%)]" />
+        </div>
         <div className="relative mx-auto max-w-7xl px-6 text-center">
           <div
-            className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border px-4 py-1.5"
+            className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border px-4 py-1.5 backdrop-blur-md"
             style={{
               borderColor: "var(--kv-border)",
-              background: "var(--kv-surface)",
+              background: "color-mix(in srgb, var(--kv-surface) 78%, transparent)",
+              boxShadow: "var(--kv-shadow-sm)",
             }}
           >
             <Sparkles className="h-4 w-4" style={{ color: "var(--kv-secondary)" }} />
@@ -196,7 +208,45 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          <div className="mt-16 grid grid-cols-2 gap-8 md:grid-cols-4">
+          <div
+            className="mx-auto mt-14 max-w-3xl rounded-2xl border p-5 text-left backdrop-blur-md"
+            style={{
+              background: "color-mix(in srgb, var(--kv-surface) 72%, transparent)",
+              borderColor: "var(--kv-border)",
+              boxShadow: "var(--kv-shadow-xl)",
+            }}
+          >
+            <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: "var(--kv-border-light)" }}>
+              <span className="heritage-caption" style={{ color: "var(--kv-secondary)" }}>
+                Live intelligence brief
+              </span>
+              <span
+                className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
+                style={{ background: "var(--kv-success)15", color: "var(--kv-success)" }}
+              >
+                <Sparkles className="h-3 w-3" /> RAG verified
+              </span>
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              {[
+                { icon: Car, title: "Transport", detail: "Oyster card + Underground, contactless accepted", color: "var(--kv-primary)" },
+                { icon: CreditCard, title: "Payments", detail: "GBP · tap-to-pay up to £100, tipping 10–15%", color: "var(--kv-secondary)" },
+                { icon: ShieldCheck, title: "Safety", detail: "999 / 112 emergency, NHS care for visitors", color: "var(--kv-success)" },
+              ].map((row) => (
+                <div
+                  key={row.title}
+                  className="rounded-xl border p-3 transition-all hover:-translate-y-0.5"
+                  style={{ borderColor: "var(--kv-border)", background: "color-mix(in srgb, var(--kv-bg-secondary) 65%, transparent)" }}
+                >
+                  <row.icon className="h-5 w-5" style={{ color: row.color }} />
+                  <p className="mt-1 text-sm font-semibold" style={{ color: "var(--kv-text)" }}>{row.title}</p>
+                  <p className="mt-0.5 text-xs leading-relaxed" style={{ color: "var(--kv-text-secondary)" }}>{row.detail}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-12 grid grid-cols-2 gap-8 md:grid-cols-4">
             {stats.map((stat) => (
               <div key={stat.label}>
                 <p
@@ -242,15 +292,19 @@ export default function LandingPage() {
             {features.map((feature) => (
               <div
                 key={feature.title}
-                className="group rounded-2xl border p-8 transition-all hover:shadow-lg"
+                className="group relative overflow-hidden rounded-2xl border p-8 transition-all hover:-translate-y-1 hover:shadow-lg"
                 style={{
                   background: "var(--kv-surface)",
                   borderColor: "var(--kv-border)",
                 }}
               >
                 <div
-                  className="mb-5 flex h-14 w-14 items-center justify-center rounded-xl"
-                  style={{ background: feature.color + "15" }}
+                  className="absolute inset-x-0 top-0 h-1 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                  style={{ background: `linear-gradient(90deg, ${feature.color}, var(--kv-secondary))` }}
+                />
+                <div
+                  className="mb-5 flex h-14 w-14 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
+                  style={{ background: feature.color + "18", boxShadow: `0 0 0 6px ${feature.color}0a` }}
                 >
                   <feature.icon className="h-7 w-7" style={{ color: feature.color }} />
                 </div>
@@ -404,8 +458,12 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="py-20" style={{ background: "var(--kv-sidebar-bg)" }}>
-        <div className="mx-auto max-w-4xl px-6 text-center">
+      <section className="relative overflow-hidden py-20" style={{ background: "var(--kv-sidebar-bg)" }}>
+        <div
+          className="pointer-events-none absolute -top-24 left-1/2 h-72 w-[36rem] -translate-x-1/2 rounded-full opacity-20 blur-3xl"
+          style={{ background: "radial-gradient(closest-side, #C49A6C, transparent 70%)" }}
+        />
+        <div className="relative mx-auto max-w-4xl px-6 text-center">
           <h2 className="heritage-heading text-3xl font-bold text-white md:text-4xl">
             Your Next Chapter Begins Here
           </h2>
