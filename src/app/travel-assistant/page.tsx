@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Compass, MapPin, Info } from "lucide-react";
+import { MapPin, Info } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import ChatInterface from "@/components/chat/ChatInterface";
 import CategoryCard from "@/components/ui/CategoryCard";
