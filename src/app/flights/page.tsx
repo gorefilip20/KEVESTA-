@@ -5,15 +5,11 @@ import {
   Plane,
   Search,
   ArrowRightLeft,
-  Calendar,
-  Users,
   Clock,
   Luggage,
   ChevronDown,
   ArrowRight,
-  Filter,
   SlidersHorizontal,
-  X,
 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import { cn } from "@/lib/utils";
@@ -117,9 +113,11 @@ export default function FlightsPage() {
         <div
           className="rounded-2xl p-6 relative overflow-hidden"
           style={{
-            background: "linear-gradient(135deg, #6C3CE1 0%, #4F46E5 50%, #06B6D4 100%)",
+            background: "linear-gradient(135deg, #2A1D40 0%, #3D2B5A 45%, #5B4180 100%)",
           }}
         >
+          <div className="pointer-events-none absolute inset-0 opacity-40" aria-hidden="true"
+               style={{ background: "radial-gradient(90% 120% at 85% -20%, rgba(196,154,108,0.35) 0%, transparent 55%), radial-gradient(70% 100% at 10% 110%, rgba(107,63,160,0.5) 0%, transparent 60%)" }} />
           <div className="relative z-10">
             <div className="flex items-center gap-2 mb-1">
               <Plane className="h-5 w-5 text-white/80" />
@@ -462,7 +460,7 @@ export default function FlightsPage() {
                         )}
                       </div>
                       <a
-                        href={`/checkout?type=flight&id=${flight.id}&amount=${flight.price}&title=${encodeURIComponent(
+                        href={`/checkout?type=flight&id=${flight.id}&amount=${flight.price * passengers}&title=${encodeURIComponent(
                           `${flight.airline} ${flight.flightNumber} — ${flight.origin.code} to ${flight.destination.code}`
                         )}`}
                         className="inline-flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90"
