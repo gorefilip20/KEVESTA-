@@ -15,8 +15,6 @@ import {
   Calendar,
   ArrowRight,
   Building2,
-  Clock,
-  Wifi,
   Heart,
 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
@@ -91,7 +89,7 @@ export default function ApartmentDetailPage({
         </div>
 
         <div className="rounded-2xl overflow-hidden">
-          <div className={`w-full h-72 md:h-96 bg-gradient-to-br ${gradient} relative`}>
+          <div className={`kv-visual w-full h-72 md:h-96 bg-gradient-to-br ${gradient} relative`}>
             <div className="absolute inset-0 flex items-center justify-center">
               <Building2 className="h-20 w-20 text-white/20" />
             </div>
@@ -319,7 +317,7 @@ export default function ApartmentDetailPage({
               </div>
 
               <a
-                href={`/checkout?type=apartment&id=${apartment.id}&amount=${apartment.price}&title=${encodeURIComponent(apartment.title)}`}
+                href={`/checkout?type=apartment&id=${apartment.id}&amount=${Math.round(apartment.price * 1.05)}&title=${encodeURIComponent(apartment.title)}`}
                 className="flex items-center justify-center gap-2 w-full rounded-xl py-3 text-sm font-semibold text-white transition-all hover:opacity-90"
                 style={{ background: "var(--kv-primary)" }}
               >
