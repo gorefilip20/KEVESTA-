@@ -6,7 +6,7 @@ import AppShell from "@/components/layout/AppShell";
 import ChatInterface from "@/components/chat/ChatInterface";
 import { useAppStore } from "@/lib/store";
 import { countries } from "@/data/countries";
-import { serviceCategories, getServicesForCountry, getServicesByCategory } from "@/data/services";
+import { serviceCategories, getServicesForCountry } from "@/data/services";
 import { generateServiceResponse } from "@/lib/ai-engine";
 import { generateId } from "@/lib/utils";
 import type { Message, ServiceRecommendation } from "@/types";
