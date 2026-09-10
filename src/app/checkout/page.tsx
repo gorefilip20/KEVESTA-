@@ -12,7 +12,7 @@ import {
   useWriteContract,
   useBalance,
 } from "wagmi";
-import { parseEther, parseUnits, formatEther, formatUnits } from "viem";
+import { parseEther, parseUnits, formatEther } from "viem";
 import {
   ArrowLeft,
   Wallet,
@@ -23,10 +23,8 @@ import {
   Clock,
   Loader2,
   AlertCircle,
-  X,
 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
-import { cn } from "@/lib/utils";
 import {
   supportedCryptos,
   convertFromUSD,
@@ -40,7 +38,46 @@ import {
   getTokenAddress,
   ERC20_ABI,
 } from "@/lib/web3/config";
-import type { CheckoutState } from "@/types";
+import type { CheckoutState, PaymentTransaction } from "@/types";
+
+function createTxId(): string {
+  return `TX-${Date.now().toString(36).toUpperCase()}`;
+}
+
+function createNow(): Date {
+  return new Date();
+}
+
+interface BuildPaymentTxArgs {
+  id: string;
+  type: "flight" | "apartment";
+  itemId: string;
+  itemTitle: string;
+  amount: number;
+  currency: string;
+  cryptoCurrency: string;
+  cryptoAmount: number;
+  walletAddress: string;
+  txHash?: string;
+  createdAt: Date;
+}
+
+function buildPaymentTransaction(args: BuildPaymentTxArgs): PaymentTransaction {
+  return {
+    id: args.id,
+    type: args.type,
+    itemId: args.itemId,
+    itemTitle: args.itemTitle,
+    amount: args.amount,
+    currency: args.currency,
+    cryptoCurrency: args.cryptoCurrency,
+    cryptoAmount: args.cryptoAmount,
+    walletAddress: args.walletAddress,
+    status: "confirming",
+    txHash: args.txHash,
+    createdAt: args.createdAt,
+  };
+}
 
 function CheckoutContent() {
   const searchParams = useSearchParams();
@@ -64,7 +101,6 @@ function CheckoutContent() {
   const [copied, setCopied] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [txError, setTxError] = useState<string | null>(null);
-  const [pendingHash, setPendingHash] = useState<`0x${string}` | undefined>();
 
   const selectedWallet = supportedCryptos.find((c) => c.symbol === state.selectedCrypto);
   const cryptoAmount = state.selectedCrypto
@@ -90,73 +126,23 @@ function CheckoutContent() {
     data: tokenTxHash,
   } = useWriteContract();
 
-  const actualTxHash = pendingHash || ethTxHash || tokenTxHash;
+  const actualTxHash = ethTxHash || tokenTxHash;
 
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
     hash: actualTxHash,
   });
 
   useEffect(() => {
-    if (web3Ready && isConnected && state.step === "connect_wallet") {
-      setState((prev) => ({ ...prev, walletConnected: true, step: "confirm" }));
-    }
-  }, [isConnected, state.step, web3Ready]);
-
-  useEffect(() => {
-    if (ethTxHash) setPendingHash(ethTxHash);
-    if (tokenTxHash) setPendingHash(tokenTxHash);
-  }, [ethTxHash, tokenTxHash]);
-
-  useEffect(() => {
-    if (actualTxHash && (isConfirming || isSendingEth || isSendingToken) && state.step === "confirm") {
-      setState((prev) => ({
-        ...prev,
-        step: "processing",
-        transaction: {
-          id: `TX-${Date.now().toString(36).toUpperCase()}`,
-          type: type as "flight" | "apartment",
-          itemId,
-          itemTitle: title,
-          amount,
-          currency: "USD",
-          cryptoCurrency: prev.selectedCrypto!,
-          cryptoAmount,
-          walletAddress: address || "",
-          status: "confirming",
-          txHash: actualTxHash,
-          createdAt: new Date(),
-        },
-      }));
-    }
-  }, [actualTxHash, isConfirming, isSendingEth, isSendingToken, state.step, type, itemId, title, amount, cryptoAmount, address]);
-
-  useEffect(() => {
-    if (isConfirmed && state.step === "processing") {
-      setState((prev) => ({
-        ...prev,
-        step: "complete",
-        transaction: prev.transaction
-          ? { ...prev.transaction, status: "confirmed", confirmedAt: new Date() }
-          : null,
-      }));
-    }
-  }, [isConfirmed, state.step]);
-
-  useEffect(() => {
     if (!web3Ready && state.step === "processing" && countdown > 0) {
       const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
       return () => clearTimeout(timer);
     }
-    if (!web3Ready && state.step === "processing" && countdown === 0) {
-      setState((prev) => ({
-        ...prev,
-        step: "complete",
-        transaction: prev.transaction
-          ? { ...prev.transaction, status: "confirmed", confirmedAt: new Date() }
-          : null,
-      }));
-    }
   }, [state.step, countdown, web3Ready]);
+
+  const web3TxComplete = web3Ready && state.step === "processing" && isConfirmed;
+  const simulatedTxComplete = !web3Ready && state.step === "processing" && countdown === 0;
+  const txComplete = web3TxComplete || simulatedTxComplete;
+  const effectiveStep: CheckoutState["step"] = txComplete ? "complete" : state.step;
 
   function selectCrypto(symbol: string) {
     setTxError(null);
@@ -165,15 +151,19 @@ function CheckoutContent() {
 
   function handleConnectWallet(connectorId: number) {
     const c = connectors[connectorId];
-    if (c) connect({ connector: c });
+    if (!c) return;
+    setTxError(null);
+    connect(
+      { connector: c },
+      {
+        onSuccess: () => {
+          setState((prev) => ({ ...prev, walletConnected: true, step: "confirm" }));
+        },
+      }
+    );
   }
 
   function handleSimulatedConnect() {
-    const chars = "0123456789abcdef";
-    let addr = "0x";
-    for (let i = 0; i < 40; i++) {
-      addr += chars[Math.floor(Math.random() * chars.length)];
-    }
     setState((prev) => ({ ...prev, walletConnected: true, step: "confirm" }));
   }
 
@@ -187,6 +177,25 @@ function CheckoutContent() {
         sendTransaction(
           { to: merchantWallet, value: parseEther(String(cryptoAmount)) },
           {
+            onSuccess: (hash) => {
+              setState((prev) => ({
+                ...prev,
+                step: "processing",
+                transaction: buildPaymentTransaction({
+                  id: createTxId(),
+                  type: type as "flight" | "apartment",
+                  itemId,
+                  itemTitle: title,
+                  amount,
+                  currency: "USD",
+                  cryptoCurrency: prev.selectedCrypto || state.selectedCrypto!,
+                  cryptoAmount,
+                  walletAddress: address || "",
+                  txHash: hash,
+                  createdAt: createNow(),
+                }),
+              }));
+            },
             onError: (err) => setTxError(err.message.split("\n")[0]),
           }
         );
@@ -194,15 +203,33 @@ function CheckoutContent() {
       }
 
       if (tokenAddr) {
-        const decimals = state.selectedCrypto === "USDT" ? 6 : 6;
         writeContract(
           {
             address: tokenAddr,
             abi: ERC20_ABI,
             functionName: "transfer",
-            args: [merchantWallet, parseUnits(String(cryptoAmount), decimals)],
+            args: [merchantWallet, parseUnits(String(cryptoAmount), 6)],
           },
           {
+            onSuccess: (hash) => {
+              setState((prev) => ({
+                ...prev,
+                step: "processing",
+                transaction: buildPaymentTransaction({
+                  id: createTxId(),
+                  type: type as "flight" | "apartment",
+                  itemId,
+                  itemTitle: title,
+                  amount,
+                  currency: "USD",
+                  cryptoCurrency: prev.selectedCrypto || state.selectedCrypto!,
+                  cryptoAmount,
+                  walletAddress: address || "",
+                  txHash: hash,
+                  createdAt: createNow(),
+                }),
+              }));
+            },
             onError: (err) => setTxError(err.message.split("\n")[0]),
           }
         );
@@ -214,8 +241,8 @@ function CheckoutContent() {
     setState((prev) => ({
       ...prev,
       step: "processing",
-      transaction: {
-        id: `TX-${Date.now().toString(36).toUpperCase()}`,
+      transaction: buildPaymentTransaction({
+        id: createTxId(),
         type: type as "flight" | "apartment",
         itemId,
         itemTitle: title,
@@ -224,10 +251,9 @@ function CheckoutContent() {
         cryptoCurrency: prev.selectedCrypto!,
         cryptoAmount,
         walletAddress: address || "0x-simulated",
-        status: "confirming",
         txHash,
-        createdAt: new Date(),
-      },
+        createdAt: createNow(),
+      }),
     }));
     setCountdown(8);
   }
@@ -285,7 +311,7 @@ function CheckoutContent() {
         {(["select_crypto", "connect_wallet", "confirm", "processing", "complete"] as const).map(
           (s, i) => {
             const stepLabels = ["Select Crypto", "Connect Wallet", "Confirm", "Processing", "Complete"];
-            const stepIndex = ["select_crypto", "connect_wallet", "confirm", "processing", "complete"].indexOf(state.step);
+            const stepIndex = ["select_crypto", "connect_wallet", "confirm", "processing", "complete"].indexOf(effectiveStep);
             const isActive = i === stepIndex;
             const isDone = i < stepIndex;
             return (
@@ -561,7 +587,7 @@ function CheckoutContent() {
         </div>
       )}
 
-      {state.step === "processing" && state.transaction && (
+      {state.step === "processing" && !txComplete && state.transaction && (
         <div
           className="rounded-xl border p-8 text-center space-y-4"
           style={{ background: "var(--kv-surface)", borderColor: "var(--kv-border)" }}
@@ -602,7 +628,7 @@ function CheckoutContent() {
         </div>
       )}
 
-      {state.step === "complete" && state.transaction && (
+      {txComplete && state.transaction && (
         <div
           className="rounded-xl border p-8 text-center space-y-4"
           style={{ background: "var(--kv-surface)", borderColor: "var(--kv-border)" }}
