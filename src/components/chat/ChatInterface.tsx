@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Paperclip, Mic, Sparkles, Copy, ThumbsUp, ThumbsDown, RotateCcw } from "lucide-react";
+import { Send, Paperclip, Mic, Sparkles, Copy, Check, ThumbsUp, ThumbsDown } from "lucide-react";
 import type { Message } from "@/types";
 import { cn, formatDate } from "@/lib/utils";
 
@@ -138,10 +138,10 @@ function MessageBubble({ message }: { message: Message }) {
               <button
                 onClick={handleCopy}
                 className="rounded p-1 transition-colors hover:opacity-70"
-                style={{ color: "var(--kv-text-tertiary)" }}
+                style={{ color: copied ? "var(--kv-success)" : "var(--kv-text-tertiary)" }}
                 title="Copy"
               >
-                <Copy className="h-3 w-3" />
+                {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
               </button>
               <button
                 className="rounded p-1 transition-colors hover:opacity-70"
