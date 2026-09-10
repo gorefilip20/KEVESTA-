@@ -11,17 +11,15 @@ import {
   Bath,
   Users,
   Shield,
-  ChevronDown,
   Heart,
   Zap,
   SlidersHorizontal,
   Grid3X3,
   List,
-  X,
 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import { cn } from "@/lib/utils";
-import { apartments, searchApartments, getFeaturedApartments } from "@/data/apartments";
+import { searchApartments } from "@/data/apartments";
 import type { Apartment } from "@/types";
 
 const cities = [
@@ -72,8 +70,6 @@ export default function ApartmentsPage() {
     return results;
   }, [searchCity, searchQuery, minPrice, maxPrice, bedrooms, priceUnit, instantBookOnly]);
 
-  const featured = useMemo(() => getFeaturedApartments().slice(0, 3), []);
-
   function toggleFavorite(id: string) {
     setFavorites((prev) => {
       const next = new Set(prev);
@@ -103,7 +99,7 @@ export default function ApartmentsPage() {
           "relative overflow-hidden",
           viewMode === "list" ? "w-64 shrink-0" : "aspect-[16/10]"
         )}>
-          <div className={`w-full h-full bg-gradient-to-br ${gradient} min-h-[180px]`}>
+          <div className={`kv-visual w-full h-full bg-gradient-to-br ${gradient} min-h-[180px]`}>
             <div className="absolute inset-0 flex items-center justify-center">
               <Building2 className="h-12 w-12 text-white/30" />
             </div>
@@ -196,7 +192,7 @@ export default function ApartmentsPage() {
         <div
           className="rounded-2xl p-6"
           style={{
-            background: "linear-gradient(135deg, #F97316 0%, #EF4444 50%, #EC4899 100%)",
+            background: "linear-gradient(135deg, #8C3B2E 0%, #B85450 55%, #C49A6C 100%)",
           }}
         >
           <div className="flex items-center gap-2 mb-1">
