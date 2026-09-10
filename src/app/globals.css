@@ -171,3 +171,49 @@ body {
 .animate-slide-left {
   animation: slideInLeft 0.3s ease-out forwards;
 }
+
+
+/* --- Kevesta craft additions: atmosphere, depth, focus --- */
+@keyframes floatSlow {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-14px) scale(1.04); }
+}
+
+.kv-visual {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.kv-visual::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 70% at 50% -10%, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 55%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(0, 0, 0, 0.18) 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.kv-visual > * {
+  position: relative;
+  z-index: 2;
+}
+
+:focus-visible {
+  outline: 2px solid var(--kv-primary);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
