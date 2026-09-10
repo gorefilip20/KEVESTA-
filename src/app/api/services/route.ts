@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServicesForCountry, getServicesByCategory } from "@/data/services";
+import { getServicesForCountry } from "@/data/services";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
