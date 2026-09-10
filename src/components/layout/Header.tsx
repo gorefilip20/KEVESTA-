@@ -6,7 +6,7 @@ import { useAppStore } from "@/lib/store";
 import { countries } from "@/data/countries";
 
 export default function Header({ title }: { title: string }) {
-  const { currentCountry, setCurrentCountry, theme, setTheme, sidebarOpen } = useAppStore();
+  const { currentCountry, setCurrentCountry, theme, setTheme } = useAppStore();
   const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
