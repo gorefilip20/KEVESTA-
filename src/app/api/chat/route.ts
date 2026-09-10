@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { generateTravelResponse } from "@/lib/ai-engine";
+import type { Message } from "@/types";
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,18 +16,25 @@ export async function POST(request: NextRequest) {
 
     const sanitizedMessage = message.slice(0, 5000);
     const sanitizedCountry = (country || "US").slice(0, 5);
+    const history: Message[] = Array.isArray(conversationHistory)
+      ? conversationHistory
+      : [];
+
+    const reply = await generateTravelResponse(
+      sanitizedMessage,
+      sanitizedCountry,
+      history
+    );
 
     return NextResponse.json({
       success: true,
-      response: {
-        content: `AI response for "${sanitizedMessage}" in ${sanitizedCountry}`,
-        type: type || "travel",
-        metadata: {
-          country: sanitizedCountry,
-          timestamp: new Date().toISOString(),
-          model: "kevesta-rag-v1",
-          ragSourcesUsed: true,
-        },
+      response: reply,
+      type: type || "travel",
+      metadata: {
+        country: sanitizedCountry,
+        timestamp: new Date().toISOString(),
+        model: "kevesta-rag-v1",
+        ragSourcesUsed: true,
       },
     });
   } catch {
