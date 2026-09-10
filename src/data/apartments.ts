@@ -70,12 +70,12 @@ function generateApartments(): Apartment[] {
       }
 
       const gradientColors = [
-        "from-blue-400 to-purple-500",
-        "from-emerald-400 to-teal-500",
-        "from-orange-400 to-rose-500",
-        "from-cyan-400 to-blue-500",
-        "from-violet-400 to-fuchsia-500",
-        "from-amber-400 to-orange-500",
+        "from-[#3D2B5A] to-[#6B3FA0]",
+        "from-[#4A7C6F] to-[#2F5248]",
+        "from-[#C49A6C] to-[#8C5A2B]",
+        "from-[#B85450] to-[#7A3B2E]",
+        "from-[#5B4180] to-[#2A1D40]",
+        "from-[#7A8B99] to-[#3D4F5C]",
       ];
       const colorIdx = Math.floor(seededRandom(seed, 20) * gradientColors.length);
 
