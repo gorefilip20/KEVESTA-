@@ -107,23 +107,38 @@ export default function FlightsPage() {
     { value: "first", label: "First Class" },
   ];
 
+  const bookingSteps = ["Search", "Results", "Seat map", "Passenger", "Payment", "Boarding"];
+
   return (
     <AppShell title="Flights">
       <div className="p-6 space-y-6">
+        <div className="mx-auto max-w-5xl overflow-x-auto rounded-2xl border px-4 py-3" style={{ background: "var(--kv-surface)", borderColor: "var(--kv-border-light)" }}>
+          <div className="flex min-w-[620px] items-center justify-between gap-3">
+            {bookingSteps.map((step, index) => (
+              <div key={step} className="flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold" style={{ background: index === 0 ? "#2F72E8" : "var(--kv-bg-tertiary)", color: index === 0 ? "#fff" : "var(--kv-text-tertiary)" }}>
+                  {index + 1}
+                </span>
+                <span className="whitespace-nowrap text-xs font-semibold" style={{ color: index === 0 ? "#2F72E8" : "var(--kv-text-tertiary)" }}>{step}</span>
+                {index < bookingSteps.length - 1 && <span className="mx-1 h-px w-8" style={{ background: "var(--kv-border)" }} />}
+              </div>
+            ))}
+          </div>
+        </div>
         <div
-          className="rounded-2xl p-6 relative overflow-hidden"
+          className="relative overflow-hidden rounded-2xl border p-6 shadow-sm"
           style={{
-            background: "linear-gradient(135deg, #2A1D40 0%, #3D2B5A 45%, #5B4180 100%)",
+            background: "#EEF3FB",
+            borderColor: "#D9E3F4",
           }}
         >
-          <div className="pointer-events-none absolute inset-0 opacity-40" aria-hidden="true"
-               style={{ background: "radial-gradient(90% 120% at 85% -20%, rgba(196,154,108,0.35) 0%, transparent 55%), radial-gradient(70% 100% at 10% 110%, rgba(107,63,160,0.5) 0%, transparent 60%)" }} />
+          <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full opacity-70" aria-hidden="true" style={{ background: "radial-gradient(circle, rgba(47,114,232,0.16) 0%, transparent 70%)" }} />
           <div className="relative z-10">
             <div className="flex items-center gap-2 mb-1">
-              <Plane className="h-5 w-5 text-white/80" />
-              <span className="text-sm font-medium text-white/80">Flight Search</span>
+              <Plane className="h-5 w-5" style={{ color: "#2F72E8" }} />
+              <span className="text-sm font-semibold" style={{ color: "#2F72E8" }}>Flight Search</span>
             </div>
-            <h2 className="text-2xl font-bold text-white mb-4">Find your next flight</h2>
+            <h2 className="mb-4 text-2xl font-bold" style={{ color: "#17243A" }}>Find your next flight</h2>
 
             <div className="flex gap-3 mb-4">
               <button
@@ -131,8 +146,8 @@ export default function FlightsPage() {
                 className={cn(
                   "px-4 py-1.5 rounded-full text-sm font-medium transition-all",
                   tripType === "round_trip"
-                    ? "bg-white text-purple-700"
-                    : "bg-white/15 text-white hover:bg-white/25"
+                    ? "bg-[#2F72E8] text-white"
+                    : "bg-white text-[#52627A] hover:bg-white/80"
                 )}
               >
                 Round Trip
@@ -142,8 +157,8 @@ export default function FlightsPage() {
                 className={cn(
                   "px-4 py-1.5 rounded-full text-sm font-medium transition-all",
                   tripType === "one_way"
-                    ? "bg-white text-purple-700"
-                    : "bg-white/15 text-white hover:bg-white/25"
+                    ? "bg-[#2F72E8] text-white"
+                    : "bg-white text-[#52627A] hover:bg-white/80"
                 )}
               >
                 One Way
@@ -153,7 +168,7 @@ export default function FlightsPage() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
               <div className="lg:col-span-4 flex items-center gap-2">
                 <div className="relative flex-1">
-                  <label className="text-xs font-medium text-white/70 mb-1 block">From</label>
+                  <label className="mb-1 block text-xs font-semibold" style={{ color: "#52627A" }}>From</label>
                   <input
                     type="text"
                     value={origin}
@@ -161,7 +176,8 @@ export default function FlightsPage() {
                     onFocus={() => origin.length >= 2 && setShowOriginDropdown(true)}
                     onBlur={() => setTimeout(() => setShowOriginDropdown(false), 200)}
                     placeholder="City or airport"
-                    className="w-full rounded-xl bg-white/15 backdrop-blur-sm px-4 py-3 text-sm text-white placeholder-white/50 border border-white/20 focus:outline-none focus:border-white/50"
+                    className="w-full rounded-xl border bg-white px-4 py-3 text-sm placeholder-[#9AA8BC] focus:outline-none focus:border-[#2F72E8]"
+                    style={{ color: "#17243A", borderColor: "#D9E3F4" }}
                   />
                   {showOriginDropdown && originSuggestions.length > 0 && (
                     <div
@@ -193,13 +209,13 @@ export default function FlightsPage() {
 
                 <button
                   onClick={swapAirports}
-                  className="mt-5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15 text-white transition-all hover:bg-white/30 hover:rotate-180"
+                  className="mt-5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-white transition-all hover:rotate-180"
                 >
                   <ArrowRightLeft className="h-4 w-4" />
                 </button>
 
                 <div className="relative flex-1">
-                  <label className="text-xs font-medium text-white/70 mb-1 block">To</label>
+                  <label className="mb-1 block text-xs font-semibold" style={{ color: "#52627A" }}>To</label>
                   <input
                     type="text"
                     value={destination}
@@ -207,7 +223,8 @@ export default function FlightsPage() {
                     onFocus={() => destination.length >= 2 && setShowDestDropdown(true)}
                     onBlur={() => setTimeout(() => setShowDestDropdown(false), 200)}
                     placeholder="City or airport"
-                    className="w-full rounded-xl bg-white/15 backdrop-blur-sm px-4 py-3 text-sm text-white placeholder-white/50 border border-white/20 focus:outline-none focus:border-white/50"
+                    className="w-full rounded-xl border bg-white px-4 py-3 text-sm placeholder-[#9AA8BC] focus:outline-none focus:border-[#2F72E8]"
+                    style={{ color: "#17243A", borderColor: "#D9E3F4" }}
                   />
                   {showDestDropdown && destSuggestions.length > 0 && (
                     <div
@@ -240,22 +257,22 @@ export default function FlightsPage() {
 
               <div className="lg:col-span-3 grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-white/70 mb-1 block">Depart</label>
+                  <label className="text-xs font-medium mb-1 block text-xs font-semibold text-[#52627A]">Depart</label>
                   <input
                     type="date"
                     value={departDate}
                     onChange={(e) => setDepartDate(e.target.value)}
-                    className="w-full rounded-xl bg-white/15 backdrop-blur-sm px-4 py-3 text-sm text-white border border-white/20 focus:outline-none focus:border-white/50 [color-scheme:dark]"
+                    className="w-full rounded-xl border bg-white px-4 py-3 text-sm focus:outline-none focus:border-[#2F72E8] [color-scheme:light]"
                   />
                 </div>
                 {tripType === "round_trip" && (
                   <div>
-                    <label className="text-xs font-medium text-white/70 mb-1 block">Return</label>
+                    <label className="text-xs font-medium mb-1 block text-xs font-semibold text-[#52627A]">Return</label>
                     <input
                       type="date"
                       value={returnDate}
                       onChange={(e) => setReturnDate(e.target.value)}
-                      className="w-full rounded-xl bg-white/15 backdrop-blur-sm px-4 py-3 text-sm text-white border border-white/20 focus:outline-none focus:border-white/50 [color-scheme:dark]"
+                      className="w-full rounded-xl border bg-white px-4 py-3 text-sm focus:outline-none focus:border-[#2F72E8] [color-scheme:light]"
                     />
                   </div>
                 )}
@@ -263,12 +280,12 @@ export default function FlightsPage() {
 
               <div className="lg:col-span-3 grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-white/70 mb-1 block">Passengers</label>
+                  <label className="text-xs font-medium mb-1 block text-xs font-semibold text-[#52627A]">Passengers</label>
                   <div className="relative">
                     <select
                       value={passengers}
                       onChange={(e) => setPassengers(Number(e.target.value))}
-                      className="w-full appearance-none rounded-xl bg-white/15 backdrop-blur-sm px-4 py-3 text-sm text-white border border-white/20 focus:outline-none focus:border-white/50"
+                      className="w-full appearance-none rounded-xl border bg-white px-4 py-3 text-sm focus:outline-none focus:border-[#2F72E8]"
                     >
                       {[1, 2, 3, 4, 5, 6].map((n) => (
                         <option key={n} value={n} className="text-black">
@@ -280,12 +297,12 @@ export default function FlightsPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-white/70 mb-1 block">Class</label>
+                  <label className="text-xs font-medium mb-1 block text-xs font-semibold text-[#52627A]">Class</label>
                   <div className="relative">
                     <select
                       value={cabinClass}
                       onChange={(e) => setCabinClass(e.target.value)}
-                      className="w-full appearance-none rounded-xl bg-white/15 backdrop-blur-sm px-4 py-3 text-sm text-white border border-white/20 focus:outline-none focus:border-white/50"
+                      className="w-full appearance-none rounded-xl border bg-white px-4 py-3 text-sm focus:outline-none focus:border-[#2F72E8]"
                     >
                       {cabinOptions.map((opt) => (
                         <option key={opt.value} value={opt.value} className="text-black">
@@ -302,7 +319,8 @@ export default function FlightsPage() {
                 <button
                   onClick={handleSearch}
                   disabled={!selectedOrigin || !selectedDest || !departDate}
-                  className="w-full rounded-xl bg-white px-6 py-3 text-sm font-semibold text-purple-700 transition-all hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full rounded-xl px-6 py-3 text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  style={{ background: "#2F72E8" }}
                 >
                   <Search className="h-4 w-4" />
                   Search
