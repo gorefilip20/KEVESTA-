@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { parseEther, parseUnits } from "viem";
+import { useAccount, useConnect, useSendTransaction, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 import {
   ArrowLeft,
   ArrowRight,
@@ -8,7 +10,6 @@ import {
   Check,
   CheckCircle2,
   Copy,
-  CreditCard,
   Luggage,
   Plane,
   Search,
@@ -21,6 +22,7 @@ import AppShell from "@/components/layout/AppShell";
 import { cn } from "@/lib/utils";
 import { getAirportSuggestions, searchFlights } from "@/data/flights";
 import { convertFromUSD, formatCryptoAmount, supportedCryptos } from "@/data/crypto";
+import { ERC20_ABI, getTokenAddress, isWeb3Configured } from "@/lib/web3/config";
 import type { Airport, FlightResult } from "@/types";
 
 type BookingStep = "search" | "results" | "seat" | "passenger" | "payment" | "confirmed";
@@ -67,6 +69,17 @@ export default function FlightsPage() {
   const [crypto, setCrypto] = useState("USDC");
   const [paymentStatus, setPaymentStatus] = useState<"idle" | "processing" | "complete">("idle");
   const [bookingCode, setBookingCode] = useState("");
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [transactionHash, setTransactionHash] = useState<string | null>(null);
+
+  const web3Ready = isWeb3Configured();
+  const { address, isConnected } = useAccount();
+  const { connect, connectors, isPending: isConnecting } = useConnect();
+  const { sendTransaction, isPending: isSendingEth } = useSendTransaction();
+  const { writeContract, isPending: isSendingToken } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
+    hash: transactionHash as `0x${string}` | undefined,
+  });
 
   const seats = useMemo(() => createSeats(), []);
   const sortedResults = [...results].sort((a, b) => sortBy === "price" ? a.price - b.price : sortBy === "stops" ? a.stops - b.stops : parseInt(a.duration) - parseInt(b.duration));
@@ -74,6 +87,7 @@ export default function FlightsPage() {
   const total = (selectedFlight?.price || 0) + (selectedSeatData?.price || 0);
   const cryptoAmount = convertFromUSD(total, crypto);
   const stepIndex = stepItems.findIndex((item) => item.id === step);
+  const merchantWallet = (process.env.NEXT_PUBLIC_MERCHANT_WALLET || "0x0000000000000000000000000000000000000000") as `0x${string}`;
 
   function updateOrigin(value: string) {
     setOrigin(value);
@@ -97,12 +111,46 @@ export default function FlightsPage() {
     setStep("results");
   }
   function chooseFlight(flight: FlightResult) { setSelectedFlight(flight); setStep("seat"); }
-  function completePayment() {
-    setPaymentStatus("processing");
-    window.setTimeout(() => { setPaymentStatus("complete"); setBookingCode(`KV${Math.random().toString(36).slice(2, 8).toUpperCase()}`); setStep("confirmed"); }, 1200);
+  function finishBooking() {
+    setPaymentStatus("complete");
+    setBookingCode(`KV${Math.random().toString(36).slice(2, 8).toUpperCase()}`);
+    setStep("confirmed");
   }
+  function startPayment() {
+    setPaymentError(null);
+    if (!web3Ready) {
+      setPaymentStatus("processing");
+      window.setTimeout(finishBooking, 1200);
+      return;
+    }
+    if (!isConnected || !address) {
+      setPaymentError("Connect a wallet before confirming payment.");
+      return;
+    }
+    setPaymentStatus("processing");
+    const tokenAddress = getTokenAddress(crypto);
+    if (crypto === "ETH") {
+      sendTransaction(
+        { to: merchantWallet, value: parseEther(String(cryptoAmount)) },
+        { onSuccess: (hash) => setTransactionHash(hash), onError: (error) => { setPaymentStatus("idle"); setPaymentError(error.message.split("\n")[0]); } }
+      );
+      return;
+    }
+    if (tokenAddress) {
+      writeContract(
+        { address: tokenAddress, abi: ERC20_ABI, functionName: "transfer", args: [merchantWallet, parseUnits(String(cryptoAmount), 6)] },
+        { onSuccess: (hash) => setTransactionHash(hash), onError: (error) => { setPaymentStatus("idle"); setPaymentError(error.message.split("\n")[0]); } }
+      );
+      return;
+    }
+    setPaymentStatus("idle");
+    setPaymentError(`${crypto} is not enabled for live wallet checkout yet. Choose ETH, USDT, or USDC.`);
+  }
+  // The receipt hook is an external async source; transition only after it reports success.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { if (paymentStatus === "processing" && transactionHash && isConfirmed) finishBooking(); }, [isConfirmed, paymentStatus, transactionHash]);
   function resetFlow() {
-    setStep("search"); setSelectedFlight(null); setSelectedSeat(null); setPaymentStatus("idle"); setBookingCode("");
+    setStep("search"); setSelectedFlight(null); setSelectedSeat(null); setPaymentStatus("idle"); setBookingCode(""); setPaymentError(null); setTransactionHash(null);
   }
 
   const fieldClass = "w-full rounded-xl border bg-white px-4 py-3 text-sm text-[#17243A] outline-none transition focus:border-[#2F72E8]";
@@ -148,7 +196,7 @@ export default function FlightsPage() {
 
         {step === "passenger" && selectedFlight && <section className="mx-auto grid max-w-4xl gap-5 lg:grid-cols-[1.2fr_.8fr]"><div className="rounded-2xl border bg-white p-5" style={{ borderColor: "var(--kv-border-light)" }}><button onClick={() => setStep("seat")} className="mb-4 flex items-center gap-2 text-sm font-semibold text-[#2F72E8]"><ArrowLeft className="h-4 w-4" /> Back to seat map</button><div className="mb-5 flex items-center gap-3"><div className="rounded-xl bg-[#E7F0FF] p-3 text-[#2F72E8]"><Ticket className="h-5 w-5" /></div><div><h1 className="text-2xl font-bold text-[#17243A]">Passenger details</h1><p className="text-sm text-[#6D7D93]">Enter the details exactly as shown on your travel document.</p></div></div><div className="grid gap-4 sm:grid-cols-2"><div><label className={labelClass}>First name</label><input className={fieldClass} value={passenger.firstName} onChange={(event) => setPassenger({ ...passenger, firstName: event.target.value })} placeholder="Sophia" /></div><div><label className={labelClass}>Last name</label><input className={fieldClass} value={passenger.lastName} onChange={(event) => setPassenger({ ...passenger, lastName: event.target.value })} placeholder="Demo" /></div><div><label className={labelClass}>Email address</label><input className={fieldClass} type="email" value={passenger.email} onChange={(event) => setPassenger({ ...passenger, email: event.target.value })} placeholder="sophia@example.com" /></div><div><label className={labelClass}>Phone number</label><input className={fieldClass} value={passenger.phone} onChange={(event) => setPassenger({ ...passenger, phone: event.target.value })} placeholder="+1 202 555 0144" /></div></div><div className="mt-5 flex items-start gap-3 rounded-xl bg-[#F7F9FC] p-4 text-sm text-[#52627A]"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[#3B9B73]" />Your information is encrypted and only used to issue your booking.</div><button disabled={!passenger.firstName || !passenger.lastName || !passenger.email} onClick={() => setStep("payment")} className="mt-5 w-full rounded-xl bg-[#2F72E8] px-4 py-3 font-semibold text-white disabled:opacity-50">Continue to payment</button></div><BookingSummary flight={selectedFlight} seat={selectedSeatData} /></section>}
 
-        {step === "payment" && selectedFlight && <section className="mx-auto grid max-w-4xl gap-5 lg:grid-cols-[1.1fr_.9fr]"><div className="rounded-2xl border bg-white p-5" style={{ borderColor: "var(--kv-border-light)" }}><button onClick={() => setStep("passenger")} className="mb-4 flex items-center gap-2 text-sm font-semibold text-[#2F72E8]"><ArrowLeft className="h-4 w-4" /> Back to passenger details</button><div className="mb-5 flex items-center gap-3"><div className="rounded-xl bg-[#E7F0FF] p-3 text-[#2F72E8]"><WalletCards className="h-5 w-5" /></div><div><h1 className="text-2xl font-bold text-[#17243A]">Pay with crypto</h1><p className="text-sm text-[#6D7D93]">Secure demo checkout with live-wallet support ready.</p></div></div><div className="grid gap-3 sm:grid-cols-3">{supportedCryptos.slice(0, 3).map((coin) => <button key={coin.symbol} onClick={() => setCrypto(coin.symbol)} className={cn("rounded-xl border p-4 text-left", crypto === coin.symbol ? "border-[#2F72E8] bg-[#E7F0FF]" : "bg-white")}><div className="text-lg font-bold text-[#17243A]">{coin.symbol}</div><div className="mt-1 text-xs text-[#6D7D93]">{formatCryptoAmount(convertFromUSD(total, coin.symbol), coin.symbol)}</div></button>)}</div><div className="mt-5 rounded-2xl bg-[#F7F9FC] p-5"><div className="flex items-center justify-between"><span className="text-sm text-[#6D7D93]">Amount due</span><span className="text-2xl font-bold text-[#17243A]">${total.toLocaleString()} <small className="text-sm font-medium text-[#8A98AA]">USD</small></span></div><div className="mt-4 flex items-center justify-between border-t pt-4"><span className="text-sm text-[#6D7D93]">Paying with {crypto}</span><b className="text-[#2F72E8]">{formatCryptoAmount(cryptoAmount, crypto)}</b></div></div><div className="mt-5 flex items-start gap-3 rounded-xl border border-[#D9E3F4] p-4 text-sm text-[#52627A]"><CreditCard className="h-5 w-5 shrink-0 text-[#2F72E8]" />No funds move in demo mode. Connect a wallet later to enable on-chain settlement.</div><button onClick={completePayment} disabled={paymentStatus === "processing"} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#2F72E8] px-4 py-3 font-semibold text-white disabled:opacity-60">{paymentStatus === "processing" ? "Confirming payment…" : `Confirm payment · ${formatCryptoAmount(cryptoAmount, crypto)}`}</button></div><BookingSummary flight={selectedFlight} seat={selectedSeatData} /></section>}
+        {step === "payment" && selectedFlight && <section className="mx-auto grid max-w-4xl gap-5 lg:grid-cols-[1.1fr_.9fr]"><div className="rounded-2xl border bg-white p-5" style={{ borderColor: "var(--kv-border-light)" }}><button onClick={() => setStep("passenger")} className="mb-4 flex items-center gap-2 text-sm font-semibold text-[#2F72E8]"><ArrowLeft className="h-4 w-4" /> Back to passenger details</button><div className="mb-5 flex items-center gap-3"><div className="rounded-xl bg-[#E7F0FF] p-3 text-[#2F72E8]"><WalletCards className="h-5 w-5" /></div><div><h1 className="text-2xl font-bold text-[#17243A]">Pay with crypto</h1><p className="text-sm text-[#6D7D93]">{web3Ready ? "Connect your wallet to settle this booking on-chain." : "Demo mode is active until a WalletConnect project ID is configured."}</p></div></div><div className="grid gap-3 sm:grid-cols-3">{supportedCryptos.filter((coin) => ["ETH", "USDT", "USDC"].includes(coin.symbol)).map((coin) => <button key={coin.symbol} onClick={() => setCrypto(coin.symbol)} className={cn("rounded-xl border p-4 text-left", crypto === coin.symbol ? "border-[#2F72E8] bg-[#E7F0FF]" : "bg-white")}><div className="text-lg font-bold text-[#17243A]">{coin.symbol}</div><div className="mt-1 text-xs text-[#6D7D93]">{formatCryptoAmount(convertFromUSD(total, coin.symbol), coin.symbol)}</div></button>)}</div><div className="mt-5 rounded-2xl bg-[#F7F9FC] p-5"><div className="flex items-center justify-between"><span className="text-sm text-[#6D7D93]">Amount due</span><span className="text-2xl font-bold text-[#17243A]">${total.toLocaleString()} <small className="text-sm font-medium text-[#8A98AA]">USD</small></span></div><div className="mt-4 flex items-center justify-between border-t pt-4"><span className="text-sm text-[#6D7D93]">Paying with {crypto}</span><b className="text-[#2F72E8]">{formatCryptoAmount(cryptoAmount, crypto)}</b></div></div>{web3Ready && !isConnected && <div className="mt-5 grid gap-2 sm:grid-cols-3">{connectors.map((connector) => <button key={connector.uid} onClick={() => connect({ connector })} disabled={isConnecting} className="rounded-xl border px-3 py-2 text-sm font-semibold text-[#52627A] hover:border-[#2F72E8]">{isConnecting ? "Connecting…" : `Connect ${connector.name}`}</button>)}</div>}{web3Ready && isConnected && <div className="mt-5 flex items-center justify-between rounded-xl bg-[#E7F6EF] p-3 text-sm text-[#287A58]"><span>Wallet connected</span><span className="font-mono">{address?.slice(0, 6)}…{address?.slice(-4)}</span></div>}{paymentError && <div className="mt-5 rounded-xl border border-[#F0C8C6] bg-[#FFF5F4] p-3 text-sm text-[#A63E39]">{paymentError}</div>}{paymentStatus === "processing" && <div className="mt-5 rounded-xl border border-[#D9E3F4] bg-[#F7F9FC] p-3 text-sm text-[#52627A]">{transactionHash ? (isConfirming ? "Transaction submitted. Waiting for network confirmation…" : "Finalizing booking…") : isSendingEth || isSendingToken ? "Waiting for wallet approval…" : "Preparing payment…"}</div>}<button onClick={startPayment} disabled={paymentStatus === "processing" || isSendingEth || isSendingToken || isConfirming} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#2F72E8] px-4 py-3 font-semibold text-white disabled:opacity-60">{paymentStatus === "processing" ? "Confirming payment…" : `Confirm payment · ${formatCryptoAmount(cryptoAmount, crypto)}`}</button></div><BookingSummary flight={selectedFlight} seat={selectedSeatData} /></section>}
 
         {step === "confirmed" && selectedFlight && <section className="mx-auto max-w-2xl"><div className="rounded-3xl border bg-white p-6 text-center shadow-sm md:p-8" style={{ borderColor: "#CDE9DB" }}><div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#DDF4E8] text-[#3B9B73]"><CheckCircle2 className="h-9 w-9" /></div><p className="mt-4 text-sm font-semibold uppercase tracking-wider text-[#3B9B73]">Booking confirmed</p><h1 className="mt-2 text-3xl font-bold text-[#17243A]">Your trip is ready</h1><p className="mt-2 text-sm text-[#6D7D93]">A boarding pass has been issued for {passenger.firstName || "your passenger"}.</p><div className="my-6 rounded-2xl bg-[#17243A] p-5 text-left text-white"><div className="flex items-center justify-between"><div><p className="text-xs uppercase tracking-wider text-white/60">Boarding pass</p><p className="mt-1 text-xl font-bold">{selectedFlight.airline}</p></div><Plane className="h-7 w-7 text-[#8DB6FF]" /></div><div className="my-6 flex items-center justify-between"><div><b className="text-3xl">{selectedFlight.origin.code}</b><p className="text-xs text-white/60">{selectedFlight.departureTime}</p></div><div className="flex-1 px-4"><div className="h-px bg-white/30" /><p className="mt-2 text-center text-xs text-white/60">{selectedFlight.duration}</p></div><div className="text-right"><b className="text-3xl">{selectedFlight.destination.code}</b><p className="text-xs text-white/60">{selectedFlight.arrivalTime}</p></div></div><div className="grid grid-cols-3 gap-3 border-t border-white/15 pt-4 text-sm"><div><p className="text-xs text-white/60">Passenger</p><b>{passenger.lastName || "Demo"}</b></div><div><p className="text-xs text-white/60">Seat</p><b>{selectedSeat}</b></div><div><p className="text-xs text-white/60">Booking code</p><b>{bookingCode}</b></div></div></div><div className="flex flex-wrap justify-center gap-3"><button onClick={() => navigator.clipboard?.writeText(bookingCode)} className="inline-flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold text-[#52627A]"><Copy className="h-4 w-4" /> Copy booking code</button><button onClick={resetFlow} className="inline-flex items-center gap-2 rounded-xl bg-[#2F72E8] px-4 py-3 text-sm font-semibold text-white"><Sparkles className="h-4 w-4" /> Book another flight</button></div></div></section>}
       </div>
