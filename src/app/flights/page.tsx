@@ -1,22 +1,51 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
+  ArrowLeft,
+  ArrowRight,
+  ArrowRightLeft,
+  Check,
+  CheckCircle2,
+  Copy,
+  CreditCard,
+  Luggage,
   Plane,
   Search,
-  ArrowRightLeft,
-  Clock,
-  Luggage,
-  ChevronDown,
-  ArrowRight,
-  SlidersHorizontal,
+  ShieldCheck,
+  Sparkles,
+  Ticket,
+  WalletCards,
 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import { cn } from "@/lib/utils";
-import { airports, searchFlights, getAirportSuggestions } from "@/data/flights";
+import { getAirportSuggestions, searchFlights } from "@/data/flights";
+import { convertFromUSD, formatCryptoAmount, supportedCryptos } from "@/data/crypto";
 import type { Airport, FlightResult } from "@/types";
 
+type BookingStep = "search" | "results" | "seat" | "passenger" | "payment" | "confirmed";
+type Seat = { id: string; row: number; letter: string; status: "available" | "selected" | "occupied"; price: number };
+
+const stepItems: { id: BookingStep; label: string }[] = [
+  { id: "search", label: "Search" },
+  { id: "results", label: "Results" },
+  { id: "seat", label: "Seat map" },
+  { id: "passenger", label: "Passenger" },
+  { id: "payment", label: "Payment" },
+  { id: "confirmed", label: "Boarding" },
+];
+
+function createSeats(): Seat[] {
+  return Array.from({ length: 36 }, (_, index) => {
+    const row = Math.floor(index / 6) + 1;
+    const letter = ["A", "B", "C", "D", "E", "F"][index % 6];
+    const occupied = [2, 5, 8, 14, 19, 24, 29, 33].includes(index);
+    return { id: `${row}${letter}`, row, letter, status: occupied ? "occupied" : "available", price: row <= 3 ? 35 : 0 };
+  });
+}
+
 export default function FlightsPage() {
+  const [step, setStep] = useState<BookingStep>("search");
   const [origin, setOrigin] = useState("");
   const [destination, setDestination] = useState("");
   const [selectedOrigin, setSelectedOrigin] = useState<Airport | null>(null);
@@ -27,520 +56,106 @@ export default function FlightsPage() {
   const [cabinClass, setCabinClass] = useState("economy");
   const [tripType, setTripType] = useState<"one_way" | "round_trip">("round_trip");
   const [results, setResults] = useState<FlightResult[]>([]);
-  const [searched, setSearched] = useState(false);
+  const [sortBy, setSortBy] = useState<"price" | "duration" | "stops">("price");
   const [originSuggestions, setOriginSuggestions] = useState<Airport[]>([]);
   const [destSuggestions, setDestSuggestions] = useState<Airport[]>([]);
   const [showOriginDropdown, setShowOriginDropdown] = useState(false);
   const [showDestDropdown, setShowDestDropdown] = useState(false);
-  const [sortBy, setSortBy] = useState<"price" | "duration" | "stops">("price");
   const [selectedFlight, setSelectedFlight] = useState<FlightResult | null>(null);
+  const [selectedSeat, setSelectedSeat] = useState<string | null>(null);
+  const [passenger, setPassenger] = useState({ firstName: "", lastName: "", email: "", phone: "" });
+  const [crypto, setCrypto] = useState("USDC");
+  const [paymentStatus, setPaymentStatus] = useState<"idle" | "processing" | "complete">("idle");
+  const [bookingCode, setBookingCode] = useState("");
 
-  function handleOriginInput(val: string) {
-    setOrigin(val);
+  const seats = useMemo(() => createSeats(), []);
+  const sortedResults = [...results].sort((a, b) => sortBy === "price" ? a.price - b.price : sortBy === "stops" ? a.stops - b.stops : parseInt(a.duration) - parseInt(b.duration));
+  const selectedSeatData = seats.find((seat) => seat.id === selectedSeat);
+  const total = (selectedFlight?.price || 0) + (selectedSeatData?.price || 0);
+  const cryptoAmount = convertFromUSD(total, crypto);
+  const stepIndex = stepItems.findIndex((item) => item.id === step);
+
+  function updateOrigin(value: string) {
+    setOrigin(value);
     setSelectedOrigin(null);
-    if (val.length >= 2) {
-      setOriginSuggestions(getAirportSuggestions(val));
-      setShowOriginDropdown(true);
-    } else {
-      setShowOriginDropdown(false);
-    }
+    setOriginSuggestions(value.length > 1 ? getAirportSuggestions(value) : []);
+    setShowOriginDropdown(value.length > 1);
   }
-
-  function handleDestInput(val: string) {
-    setDestination(val);
+  function updateDestination(value: string) {
+    setDestination(value);
     setSelectedDest(null);
-    if (val.length >= 2) {
-      setDestSuggestions(getAirportSuggestions(val));
-      setShowDestDropdown(true);
-    } else {
-      setShowDestDropdown(false);
-    }
+    setDestSuggestions(value.length > 1 ? getAirportSuggestions(value) : []);
+    setShowDestDropdown(value.length > 1);
   }
-
-  function selectOrigin(a: Airport) {
-    setSelectedOrigin(a);
-    setOrigin(`${a.city} (${a.code})`);
-    setShowOriginDropdown(false);
+  function selectAirport(airport: Airport, type: "origin" | "destination") {
+    if (type === "origin") { setSelectedOrigin(airport); setOrigin(`${airport.city} (${airport.code})`); setShowOriginDropdown(false); }
+    else { setSelectedDest(airport); setDestination(`${airport.city} (${airport.code})`); setShowDestDropdown(false); }
   }
-
-  function selectDest(a: Airport) {
-    setSelectedDest(a);
-    setDestination(`${a.city} (${a.code})`);
-    setShowDestDropdown(false);
-  }
-
-  function swapAirports() {
-    const tmpOrigin = selectedOrigin;
-    const tmpOriginText = origin;
-    setSelectedOrigin(selectedDest);
-    setOrigin(destination);
-    setSelectedDest(tmpOrigin);
-    setDestination(tmpOriginText);
-  }
-
-  function handleSearch() {
+  function search() {
     if (!selectedOrigin || !selectedDest || !departDate) return;
-    const flightResults = searchFlights(
-      selectedOrigin.code,
-      selectedDest.code,
-      departDate,
-      cabinClass,
-      passengers
-    );
-    setResults(flightResults);
-    setSearched(true);
-    setSelectedFlight(null);
+    setResults(searchFlights(selectedOrigin.code, selectedDest.code, departDate, cabinClass, passengers));
+    setStep("results");
+  }
+  function chooseFlight(flight: FlightResult) { setSelectedFlight(flight); setStep("seat"); }
+  function completePayment() {
+    setPaymentStatus("processing");
+    window.setTimeout(() => { setPaymentStatus("complete"); setBookingCode(`KV${Math.random().toString(36).slice(2, 8).toUpperCase()}`); setStep("confirmed"); }, 1200);
+  }
+  function resetFlow() {
+    setStep("search"); setSelectedFlight(null); setSelectedSeat(null); setPaymentStatus("idle"); setBookingCode("");
   }
 
-  const sortedResults = [...results].sort((a, b) => {
-    if (sortBy === "price") return a.price - b.price;
-    if (sortBy === "stops") return a.stops - b.stops;
-    const durA = parseInt(a.duration);
-    const durB = parseInt(b.duration);
-    return durA - durB;
-  });
-
-  const cabinOptions = [
-    { value: "economy", label: "Economy" },
-    { value: "premium_economy", label: "Premium Economy" },
-    { value: "business", label: "Business" },
-    { value: "first", label: "First Class" },
-  ];
-
-  const bookingSteps = ["Search", "Results", "Seat map", "Passenger", "Payment", "Boarding"];
+  const fieldClass = "w-full rounded-xl border bg-white px-4 py-3 text-sm text-[#17243A] outline-none transition focus:border-[#2F72E8]";
+  const labelClass = "mb-1 block text-xs font-semibold text-[#52627A]";
 
   return (
     <AppShell title="Flights">
-      <div className="p-6 space-y-6">
-        <div className="mx-auto max-w-5xl overflow-x-auto rounded-2xl border px-4 py-3" style={{ background: "var(--kv-surface)", borderColor: "var(--kv-border-light)" }}>
-          <div className="flex min-w-[620px] items-center justify-between gap-3">
-            {bookingSteps.map((step, index) => (
-              <div key={step} className="flex items-center gap-2">
-                <span className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold" style={{ background: index === 0 ? "#2F72E8" : "var(--kv-bg-tertiary)", color: index === 0 ? "#fff" : "var(--kv-text-tertiary)" }}>
-                  {index + 1}
-                </span>
-                <span className="whitespace-nowrap text-xs font-semibold" style={{ color: index === 0 ? "#2F72E8" : "var(--kv-text-tertiary)" }}>{step}</span>
-                {index < bookingSteps.length - 1 && <span className="mx-1 h-px w-8" style={{ background: "var(--kv-border)" }} />}
-              </div>
-            ))}
-          </div>
-        </div>
-        <div
-          className="relative overflow-hidden rounded-2xl border p-6 shadow-sm"
-          style={{
-            background: "#EEF3FB",
-            borderColor: "#D9E3F4",
-          }}
-        >
-          <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full opacity-70" aria-hidden="true" style={{ background: "radial-gradient(circle, rgba(47,114,232,0.16) 0%, transparent 70%)" }} />
-          <div className="relative z-10">
-            <div className="flex items-center gap-2 mb-1">
-              <Plane className="h-5 w-5" style={{ color: "#2F72E8" }} />
-              <span className="text-sm font-semibold" style={{ color: "#2F72E8" }}>Flight Search</span>
-            </div>
-            <h2 className="mb-4 text-2xl font-bold" style={{ color: "#17243A" }}>Find your next flight</h2>
-
-            <div className="flex gap-3 mb-4">
-              <button
-                onClick={() => setTripType("round_trip")}
-                className={cn(
-                  "px-4 py-1.5 rounded-full text-sm font-medium transition-all",
-                  tripType === "round_trip"
-                    ? "bg-[#2F72E8] text-white"
-                    : "bg-white text-[#52627A] hover:bg-white/80"
-                )}
-              >
-                Round Trip
-              </button>
-              <button
-                onClick={() => setTripType("one_way")}
-                className={cn(
-                  "px-4 py-1.5 rounded-full text-sm font-medium transition-all",
-                  tripType === "one_way"
-                    ? "bg-[#2F72E8] text-white"
-                    : "bg-white text-[#52627A] hover:bg-white/80"
-                )}
-              >
-                One Way
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-              <div className="lg:col-span-4 flex items-center gap-2">
-                <div className="relative flex-1">
-                  <label className="mb-1 block text-xs font-semibold" style={{ color: "#52627A" }}>From</label>
-                  <input
-                    type="text"
-                    value={origin}
-                    onChange={(e) => handleOriginInput(e.target.value)}
-                    onFocus={() => origin.length >= 2 && setShowOriginDropdown(true)}
-                    onBlur={() => setTimeout(() => setShowOriginDropdown(false), 200)}
-                    placeholder="City or airport"
-                    className="w-full rounded-xl border bg-white px-4 py-3 text-sm placeholder-[#9AA8BC] focus:outline-none focus:border-[#2F72E8]"
-                    style={{ color: "#17243A", borderColor: "#D9E3F4" }}
-                  />
-                  {showOriginDropdown && originSuggestions.length > 0 && (
-                    <div
-                      className="absolute top-full left-0 right-0 mt-1 rounded-xl overflow-hidden shadow-xl z-50"
-                      style={{ background: "var(--kv-surface)", border: "1px solid var(--kv-border)" }}
-                    >
-                      {originSuggestions.map((a) => (
-                        <button
-                          key={a.code}
-                          onMouseDown={() => selectOrigin(a)}
-                          className="flex items-center gap-3 w-full px-4 py-2.5 text-left text-sm transition-colors"
-                          style={{ color: "var(--kv-text)" }}
-                          onMouseEnter={(e) => {
-                            (e.currentTarget as HTMLElement).style.background = "var(--kv-surface-hover)";
-                          }}
-                          onMouseLeave={(e) => {
-                            (e.currentTarget as HTMLElement).style.background = "transparent";
-                          }}
-                        >
-                          <span className="font-mono font-bold text-xs px-1.5 py-0.5 rounded" style={{ background: "var(--kv-bg-tertiary)" }}>
-                            {a.code}
-                          </span>
-                          <span>{a.city} &mdash; {a.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <button
-                  onClick={swapAirports}
-                  className="mt-5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-white transition-all hover:rotate-180"
-                >
-                  <ArrowRightLeft className="h-4 w-4" />
-                </button>
-
-                <div className="relative flex-1">
-                  <label className="mb-1 block text-xs font-semibold" style={{ color: "#52627A" }}>To</label>
-                  <input
-                    type="text"
-                    value={destination}
-                    onChange={(e) => handleDestInput(e.target.value)}
-                    onFocus={() => destination.length >= 2 && setShowDestDropdown(true)}
-                    onBlur={() => setTimeout(() => setShowDestDropdown(false), 200)}
-                    placeholder="City or airport"
-                    className="w-full rounded-xl border bg-white px-4 py-3 text-sm placeholder-[#9AA8BC] focus:outline-none focus:border-[#2F72E8]"
-                    style={{ color: "#17243A", borderColor: "#D9E3F4" }}
-                  />
-                  {showDestDropdown && destSuggestions.length > 0 && (
-                    <div
-                      className="absolute top-full left-0 right-0 mt-1 rounded-xl overflow-hidden shadow-xl z-50"
-                      style={{ background: "var(--kv-surface)", border: "1px solid var(--kv-border)" }}
-                    >
-                      {destSuggestions.map((a) => (
-                        <button
-                          key={a.code}
-                          onMouseDown={() => selectDest(a)}
-                          className="flex items-center gap-3 w-full px-4 py-2.5 text-left text-sm transition-colors"
-                          style={{ color: "var(--kv-text)" }}
-                          onMouseEnter={(e) => {
-                            (e.currentTarget as HTMLElement).style.background = "var(--kv-surface-hover)";
-                          }}
-                          onMouseLeave={(e) => {
-                            (e.currentTarget as HTMLElement).style.background = "transparent";
-                          }}
-                        >
-                          <span className="font-mono font-bold text-xs px-1.5 py-0.5 rounded" style={{ background: "var(--kv-bg-tertiary)" }}>
-                            {a.code}
-                          </span>
-                          <span>{a.city} &mdash; {a.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="lg:col-span-3 grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-medium mb-1 block text-xs font-semibold text-[#52627A]">Depart</label>
-                  <input
-                    type="date"
-                    value={departDate}
-                    onChange={(e) => setDepartDate(e.target.value)}
-                    className="w-full rounded-xl border bg-white px-4 py-3 text-sm focus:outline-none focus:border-[#2F72E8] [color-scheme:light]"
-                  />
-                </div>
-                {tripType === "round_trip" && (
-                  <div>
-                    <label className="text-xs font-medium mb-1 block text-xs font-semibold text-[#52627A]">Return</label>
-                    <input
-                      type="date"
-                      value={returnDate}
-                      onChange={(e) => setReturnDate(e.target.value)}
-                      className="w-full rounded-xl border bg-white px-4 py-3 text-sm focus:outline-none focus:border-[#2F72E8] [color-scheme:light]"
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div className="lg:col-span-3 grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-medium mb-1 block text-xs font-semibold text-[#52627A]">Passengers</label>
-                  <div className="relative">
-                    <select
-                      value={passengers}
-                      onChange={(e) => setPassengers(Number(e.target.value))}
-                      className="w-full appearance-none rounded-xl border bg-white px-4 py-3 text-sm focus:outline-none focus:border-[#2F72E8]"
-                    >
-                      {[1, 2, 3, 4, 5, 6].map((n) => (
-                        <option key={n} value={n} className="text-black">
-                          {n} {n === 1 ? "Passenger" : "Passengers"}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50 pointer-events-none" />
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs font-medium mb-1 block text-xs font-semibold text-[#52627A]">Class</label>
-                  <div className="relative">
-                    <select
-                      value={cabinClass}
-                      onChange={(e) => setCabinClass(e.target.value)}
-                      className="w-full appearance-none rounded-xl border bg-white px-4 py-3 text-sm focus:outline-none focus:border-[#2F72E8]"
-                    >
-                      {cabinOptions.map((opt) => (
-                        <option key={opt.value} value={opt.value} className="text-black">
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50 pointer-events-none" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="lg:col-span-2 flex items-end">
-                <button
-                  onClick={handleSearch}
-                  disabled={!selectedOrigin || !selectedDest || !departDate}
-                  className="w-full rounded-xl px-6 py-3 text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  style={{ background: "#2F72E8" }}
-                >
-                  <Search className="h-4 w-4" />
-                  Search
-                </button>
-              </div>
-            </div>
+      <div className="mx-auto max-w-6xl space-y-5 p-4 md:p-6">
+        <div className="overflow-x-auto rounded-2xl border bg-white px-4 py-3" style={{ borderColor: "var(--kv-border-light)" }}>
+          <div className="flex min-w-[660px] items-center justify-between gap-2">
+            {stepItems.map((item, index) => {
+              const done = index < stepIndex;
+              const active = item.id === step;
+              return <button key={item.id} onClick={() => index <= stepIndex && setStep(item.id)} className="flex items-center gap-2 text-left" disabled={index > stepIndex}>
+                <span className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold" style={{ background: done ? "#3B9B73" : active ? "#2F72E8" : "#EEF1F6", color: done || active ? "white" : "#8A98AA" }}>{done ? <Check className="h-4 w-4" /> : index + 1}</span>
+                <span className="whitespace-nowrap text-xs font-semibold" style={{ color: active ? "#2F72E8" : done ? "#3B9B73" : "#8A98AA" }}>{item.label}</span>
+                {index < stepItems.length - 1 && <span className="mx-2 h-px w-8" style={{ background: done ? "#3B9B73" : "#D9E3F4" }} />}
+              </button>;
+            })}
           </div>
         </div>
 
-        {searched && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold" style={{ color: "var(--kv-text)" }}>
-                  {selectedOrigin?.city} → {selectedDest?.city}
-                </h3>
-                <p className="text-sm" style={{ color: "var(--kv-text-secondary)" }}>
-                  {results.length} flights found &middot; {departDate}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <SlidersHorizontal className="h-4 w-4" style={{ color: "var(--kv-text-secondary)" }} />
-                <span className="text-sm mr-2" style={{ color: "var(--kv-text-secondary)" }}>Sort:</span>
-                {(["price", "duration", "stops"] as const).map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setSortBy(s)}
-                    className={cn(
-                      "px-3 py-1.5 rounded-lg text-xs font-medium transition-all capitalize",
-                    )}
-                    style={{
-                      background: sortBy === s ? "var(--kv-primary)" : "var(--kv-bg-tertiary)",
-                      color: sortBy === s ? "#fff" : "var(--kv-text-secondary)",
-                    }}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
+        {step === "search" && <section className="relative overflow-hidden rounded-2xl border p-5 shadow-sm md:p-7" style={{ background: "#EEF3FB", borderColor: "#D9E3F4" }}>
+          <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full" style={{ background: "radial-gradient(circle, rgba(47,114,232,.18), transparent 70%)" }} />
+          <div className="relative">
+            <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-[#2F72E8]"><Plane className="h-5 w-5" /> Flight Search</div>
+            <h1 className="mb-5 text-2xl font-bold text-[#17243A]">Find your next flight</h1>
+            <div className="mb-5 flex gap-2"><button onClick={() => setTripType("round_trip")} className={cn("rounded-full px-4 py-2 text-sm font-semibold", tripType === "round_trip" ? "bg-[#2F72E8] text-white" : "bg-white text-[#52627A]")}>Round Trip</button><button onClick={() => setTripType("one_way")} className={cn("rounded-full px-4 py-2 text-sm font-semibold", tripType === "one_way" ? "bg-[#2F72E8] text-white" : "bg-white text-[#52627A]")}>One Way</button></div>
+            <div className="grid gap-3 lg:grid-cols-12">
+              <div className="relative lg:col-span-3"><label className={labelClass}>From</label><input className={fieldClass} value={origin} placeholder="City or airport" onChange={(event) => updateOrigin(event.target.value)} />{showOriginDropdown && originSuggestions.length > 0 && <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-xl border bg-white shadow-xl">{originSuggestions.map((airport) => <button key={airport.code} onMouseDown={() => selectAirport(airport, "origin")} className="block w-full px-4 py-3 text-left text-sm hover:bg-[#EEF3FB]">{airport.city} <span className="text-[#8A98AA]">({airport.code})</span></button>)}</div>}</div>
+              <button aria-label="Swap airports" onClick={() => { const text = origin; setOrigin(destination); setDestination(text); const airport = selectedOrigin; setSelectedOrigin(selectedDest); setSelectedDest(airport); }} className="mt-5 flex h-11 w-11 items-center justify-center rounded-full border bg-white text-[#2F72E8] hover:rotate-180" style={{ borderColor: "#D9E3F4" }}><ArrowRightLeft className="h-4 w-4" /></button>
+              <div className="relative lg:col-span-3"><label className={labelClass}>To</label><input className={fieldClass} value={destination} placeholder="City or airport" onChange={(event) => updateDestination(event.target.value)} />{showDestDropdown && destSuggestions.length > 0 && <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-xl border bg-white shadow-xl">{destSuggestions.map((airport) => <button key={airport.code} onMouseDown={() => selectAirport(airport, "destination")} className="block w-full px-4 py-3 text-left text-sm hover:bg-[#EEF3FB]">{airport.city} <span className="text-[#8A98AA]">({airport.code})</span></button>)}</div>}</div>
+              <div className="lg:col-span-3"><label className={labelClass}>Depart {tripType === "round_trip" && "/ Return"}</label><div className="grid grid-cols-2 gap-2"><input aria-label="Depart date" type="date" className={fieldClass} value={departDate} onChange={(event) => setDepartDate(event.target.value)} /><input aria-label="Return date" type="date" className={fieldClass} value={returnDate} onChange={(event) => setReturnDate(event.target.value)} disabled={tripType === "one_way"} /></div></div>
+              <div className="lg:col-span-3 grid grid-cols-2 gap-2"><div><label className={labelClass}>Passengers</label><select className={fieldClass} value={passengers} onChange={(event) => setPassengers(Number(event.target.value))}>{[1, 2, 3, 4, 5, 6].map((number) => <option key={number} value={number}>{number} {number === 1 ? "Passenger" : "Passengers"}</option>)}</select></div><div><label className={labelClass}>Class</label><select className={fieldClass} value={cabinClass} onChange={(event) => setCabinClass(event.target.value)}><option value="economy">Economy</option><option value="premium_economy">Premium Economy</option><option value="business">Business</option><option value="first">First Class</option></select></div></div>
             </div>
-
-            <div className="space-y-3">
-              {sortedResults.map((flight) => (
-                <div
-                  key={flight.id}
-                  onClick={() => setSelectedFlight(selectedFlight?.id === flight.id ? null : flight)}
-                  className="rounded-xl border transition-all cursor-pointer"
-                  style={{
-                    background: "var(--kv-surface)",
-                    borderColor: selectedFlight?.id === flight.id ? "var(--kv-primary)" : "var(--kv-border)",
-                    boxShadow: selectedFlight?.id === flight.id ? "0 0 0 1px var(--kv-primary)" : "var(--kv-shadow-sm)",
-                  }}
-                >
-                  <div className="p-5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div
-                          className="flex h-12 w-12 items-center justify-center rounded-xl text-sm font-bold"
-                          style={{ background: "var(--kv-bg-tertiary)", color: "var(--kv-primary)" }}
-                        >
-                          {flight.airlineLogo}
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold" style={{ color: "var(--kv-text)" }}>
-                            {flight.airline}
-                          </p>
-                          <p className="text-xs" style={{ color: "var(--kv-text-tertiary)" }}>
-                            {flight.flightNumber} &middot; {flight.aircraft}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-8 text-center">
-                        <div>
-                          <p className="text-lg font-bold" style={{ color: "var(--kv-text)" }}>
-                            {flight.departureTime}
-                          </p>
-                          <p className="text-xs" style={{ color: "var(--kv-text-tertiary)" }}>
-                            {flight.origin.code}
-                          </p>
-                        </div>
-
-                        <div className="flex flex-col items-center gap-1">
-                          <p className="text-xs" style={{ color: "var(--kv-text-tertiary)" }}>
-                            {flight.duration}
-                          </p>
-                          <div className="flex items-center gap-1">
-                            <div className="h-0.5 w-16 rounded" style={{ background: "var(--kv-border)" }} />
-                            <Plane className="h-3 w-3" style={{ color: "var(--kv-primary)" }} />
-                          </div>
-                          <p className="text-xs font-medium" style={{
-                            color: flight.stops === 0 ? "var(--kv-success)" : "var(--kv-secondary)"
-                          }}>
-                            {flight.stops === 0 ? "Direct" : `${flight.stops} stop${flight.stops > 1 ? "s" : ""}`}
-                          </p>
-                        </div>
-
-                        <div>
-                          <p className="text-lg font-bold" style={{ color: "var(--kv-text)" }}>
-                            {flight.arrivalTime}
-                          </p>
-                          <p className="text-xs" style={{ color: "var(--kv-text-tertiary)" }}>
-                            {flight.destination.code}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="text-right">
-                        <p className="text-xl font-bold" style={{ color: "var(--kv-primary)" }}>
-                          ${flight.price.toLocaleString()}
-                        </p>
-                        <p className="text-xs" style={{ color: "var(--kv-text-tertiary)" }}>
-                          {flight.cabinClass} &middot; {passengers > 1 ? `${passengers} pax` : "per person"}
-                        </p>
-                        {flight.seatsLeft && (
-                          <p className="text-xs font-medium mt-0.5" style={{ color: "var(--kv-error)" }}>
-                            {flight.seatsLeft} seats left
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {selectedFlight?.id === flight.id && (
-                    <div
-                      className="border-t px-5 py-4"
-                      style={{ borderColor: "var(--kv-border-light)", background: "var(--kv-bg-secondary)" }}
-                    >
-                      <div className="grid grid-cols-4 gap-4 mb-4">
-                        <div className="flex items-center gap-2">
-                          <Luggage className="h-4 w-4" style={{ color: "var(--kv-text-tertiary)" }} />
-                          <span className="text-sm" style={{ color: "var(--kv-text-secondary)" }}>
-                            Baggage: {flight.baggage}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4" style={{ color: "var(--kv-text-tertiary)" }} />
-                          <span className="text-sm" style={{ color: "var(--kv-text-secondary)" }}>
-                            Duration: {flight.duration}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Plane className="h-4 w-4" style={{ color: "var(--kv-text-tertiary)" }} />
-                          <span className="text-sm" style={{ color: "var(--kv-text-secondary)" }}>
-                            Aircraft: {flight.aircraft}
-                          </span>
-                        </div>
-                        {flight.stopCities && flight.stopCities.length > 0 && (
-                          <div className="flex items-center gap-2">
-                            <ArrowRight className="h-4 w-4" style={{ color: "var(--kv-text-tertiary)" }} />
-                            <span className="text-sm" style={{ color: "var(--kv-text-secondary)" }}>
-                              Via: {flight.stopCities.join(", ")}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                      <a
-                        href={`/checkout?type=flight&id=${flight.id}&amount=${flight.price * passengers}&title=${encodeURIComponent(
-                          `${flight.airline} ${flight.flightNumber} — ${flight.origin.code} to ${flight.destination.code}`
-                        )}`}
-                        className="inline-flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90"
-                        style={{ background: "var(--kv-primary)" }}
-                      >
-                        Book with Crypto
-                        <ArrowRight className="h-4 w-4" />
-                      </a>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+            <button onClick={search} disabled={!selectedOrigin || !selectedDest || !departDate} className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#2F72E8] px-6 py-3 font-semibold text-white transition hover:bg-[#245FC8] disabled:cursor-not-allowed disabled:opacity-50"><Search className="h-4 w-4" /> Search flights</button>
           </div>
-        )}
+        </section>}
 
-        {!searched && (
-          <div className="grid gap-4 md:grid-cols-3">
-            {[
-              { from: "New York", to: "London", fromCode: "JFK", toCode: "LHR", price: "$380+" },
-              { from: "Tokyo", to: "Singapore", fromCode: "NRT", toCode: "SIN", price: "$290+" },
-              { from: "Dubai", to: "Paris", fromCode: "DXB", toCode: "CDG", price: "$420+" },
-            ].map((route) => (
-              <button
-                key={route.fromCode + route.toCode}
-                onClick={() => {
-                  const o = airports.find((a) => a.code === route.fromCode);
-                  const d = airports.find((a) => a.code === route.toCode);
-                  if (o && d) {
-                    selectOrigin(o);
-                    selectDest(d);
-                  }
-                }}
-                className="group rounded-xl border p-5 text-left transition-all hover:shadow-md"
-                style={{
-                  background: "var(--kv-surface)",
-                  borderColor: "var(--kv-border)",
-                }}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs font-bold px-2 py-1 rounded" style={{ background: "var(--kv-bg-tertiary)", color: "var(--kv-primary)" }}>
-                      {route.fromCode}
-                    </span>
-                    <ArrowRight className="h-3 w-3" style={{ color: "var(--kv-text-tertiary)" }} />
-                    <span className="font-mono text-xs font-bold px-2 py-1 rounded" style={{ background: "var(--kv-bg-tertiary)", color: "var(--kv-primary)" }}>
-                      {route.toCode}
-                    </span>
-                  </div>
-                  <span className="text-sm font-bold" style={{ color: "var(--kv-primary)" }}>{route.price}</span>
-                </div>
-                <p className="text-sm font-semibold" style={{ color: "var(--kv-text)" }}>
-                  {route.from} → {route.to}
-                </p>
-                <p className="text-xs mt-0.5" style={{ color: "var(--kv-text-tertiary)" }}>
-                  Click to search this route
-                </p>
-              </button>
-            ))}
-          </div>
-        )}
+        {step === "results" && <section className="space-y-4"><div className="flex flex-wrap items-end justify-between gap-3"><div><button onClick={() => setStep("search")} className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#2F72E8]"><ArrowLeft className="h-4 w-4" /> Edit search</button><h1 className="text-2xl font-bold text-[#17243A]">{selectedOrigin?.city} <span className="text-[#8A98AA]">to</span> {selectedDest?.city}</h1><p className="mt-1 text-sm text-[#6D7D93]">{results.length} flights found · {departDate}</p></div><div className="flex items-center gap-2 text-sm"><span className="text-[#6D7D93]">Sort by</span>{(["price", "duration", "stops"] as const).map((value) => <button key={value} onClick={() => setSortBy(value)} className={cn("rounded-lg px-3 py-2 capitalize", sortBy === value ? "bg-[#2F72E8] text-white" : "bg-white text-[#52627A] border")}>{value}</button>)}</div></div><div className="space-y-3">{sortedResults.map((flight) => <article key={flight.id} className="rounded-2xl border bg-white p-4 shadow-sm md:p-5" style={{ borderColor: "var(--kv-border-light)" }}><div className="grid items-center gap-4 md:grid-cols-[1.2fr_1.8fr_.8fr_auto]"><div className="flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#EEF3FB] text-sm font-bold text-[#2F72E8]">{flight.airlineLogo}</span><div><p className="font-semibold text-[#17243A]">{flight.airline}</p><p className="text-xs text-[#8A98AA]">{flight.flightNumber} · {flight.aircraft}</p></div></div><div className="flex items-center justify-center gap-3 text-center"><div><p className="text-lg font-bold text-[#17243A]">{flight.departureTime}</p><p className="text-xs text-[#8A98AA]">{flight.origin.code}</p></div><div className="min-w-24"><p className="text-xs text-[#8A98AA]">{flight.duration}</p><div className="my-1 flex items-center"><span className="h-px flex-1 bg-[#D9E3F4]" /><Plane className="mx-1 h-3 w-3 text-[#2F72E8]" /><span className="h-px flex-1 bg-[#D9E3F4]" /></div><p className={cn("text-xs font-semibold", flight.stops === 0 ? "text-[#3B9B73]" : "text-[#B7791F]")}>{flight.stops === 0 ? "Direct" : `${flight.stops} stop${flight.stops > 1 ? "s" : ""}`}</p></div><div><p className="text-lg font-bold text-[#17243A]">{flight.arrivalTime}</p><p className="text-xs text-[#8A98AA]">{flight.destination.code}</p></div></div><div className="text-center md:text-right"><p className="text-xl font-bold text-[#2F72E8]">${flight.price.toLocaleString()}</p><p className="text-xs text-[#8A98AA]">{flight.baggage}</p></div><button onClick={() => chooseFlight(flight)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#2F72E8] px-4 py-3 text-sm font-semibold text-white hover:bg-[#245FC8]">Select <ArrowRight className="h-4 w-4" /></button></div></article>)}</div></section>}
+
+        {step === "seat" && selectedFlight && <section className="grid gap-5 lg:grid-cols-[1.4fr_.8fr]"><div className="rounded-2xl border bg-white p-5" style={{ borderColor: "var(--kv-border-light)" }}><button onClick={() => setStep("results")} className="mb-4 flex items-center gap-2 text-sm font-semibold text-[#2F72E8]"><ArrowLeft className="h-4 w-4" /> Back to results</button><h1 className="text-2xl font-bold text-[#17243A]">Choose your seat</h1><p className="mt-1 text-sm text-[#6D7D93]">Select a seat for {selectedFlight.flightNumber} · {selectedFlight.origin.code} to {selectedFlight.destination.code}</p><div className="mx-auto mt-6 max-w-sm rounded-[2rem] border-2 border-[#D9E3F4] bg-[#F7F9FC] p-5"><div className="mb-5 flex items-center justify-center gap-2 text-xs font-semibold text-[#8A98AA]"><Plane className="h-4 w-4 rotate-90" /> FRONT OF AIRCRAFT</div><div className="grid grid-cols-6 gap-2">{seats.map((seat, index) => <button key={seat.id} disabled={seat.status === "occupied"} onClick={() => setSelectedSeat(seat.id)} className={cn("h-10 rounded-lg text-xs font-bold transition", seat.status === "occupied" ? "bg-[#D9E0EA] text-[#9AA8BC]" : selectedSeat === seat.id ? "bg-[#2F72E8] text-white ring-2 ring-[#9FC0FA]" : "bg-white text-[#52627A] shadow-sm hover:bg-[#E7F0FF]", index % 6 === 2 ? "mr-3" : "")}>{seat.id}</button>)}</div><div className="mt-6 flex justify-center gap-4 text-xs text-[#6D7D93]"><span><i className="mr-1 inline-block h-3 w-3 rounded bg-white shadow-sm" /> Available</span><span><i className="mr-1 inline-block h-3 w-3 rounded bg-[#2F72E8]" /> Selected</span><span><i className="mr-1 inline-block h-3 w-3 rounded bg-[#D9E0EA]" /> Occupied</span></div></div></div><aside className="h-fit rounded-2xl border bg-white p-5" style={{ borderColor: "var(--kv-border-light)" }}><p className="text-xs font-semibold uppercase tracking-wider text-[#8A98AA]">Selected flight</p><h2 className="mt-2 font-bold text-[#17243A]">{selectedFlight.airline} {selectedFlight.flightNumber}</h2><div className="my-4 flex items-center justify-between text-center"><div><b className="text-xl text-[#17243A]">{selectedFlight.departureTime}</b><p className="text-xs text-[#8A98AA]">{selectedFlight.origin.code}</p></div><ArrowRight className="h-4 w-4 text-[#2F72E8]" /><div><b className="text-xl text-[#17243A]">{selectedFlight.arrivalTime}</b><p className="text-xs text-[#8A98AA]">{selectedFlight.destination.code}</p></div></div><div className="border-t pt-4 text-sm text-[#6D7D93]"><div className="flex justify-between"><span>Flight</span><b className="text-[#17243A]">${selectedFlight.price}</b></div><div className="mt-2 flex justify-between"><span>Seat {selectedSeat || "—"}</span><b className="text-[#17243A]">{selectedSeatData ? `$${selectedSeatData.price}` : "—"}</b></div></div><button disabled={!selectedSeat} onClick={() => setStep("passenger")} className="mt-5 w-full rounded-xl bg-[#2F72E8] px-4 py-3 font-semibold text-white disabled:opacity-50">Continue to passenger</button></aside></section>}
+
+        {step === "passenger" && selectedFlight && <section className="mx-auto grid max-w-4xl gap-5 lg:grid-cols-[1.2fr_.8fr]"><div className="rounded-2xl border bg-white p-5" style={{ borderColor: "var(--kv-border-light)" }}><button onClick={() => setStep("seat")} className="mb-4 flex items-center gap-2 text-sm font-semibold text-[#2F72E8]"><ArrowLeft className="h-4 w-4" /> Back to seat map</button><div className="mb-5 flex items-center gap-3"><div className="rounded-xl bg-[#E7F0FF] p-3 text-[#2F72E8]"><Ticket className="h-5 w-5" /></div><div><h1 className="text-2xl font-bold text-[#17243A]">Passenger details</h1><p className="text-sm text-[#6D7D93]">Enter the details exactly as shown on your travel document.</p></div></div><div className="grid gap-4 sm:grid-cols-2"><div><label className={labelClass}>First name</label><input className={fieldClass} value={passenger.firstName} onChange={(event) => setPassenger({ ...passenger, firstName: event.target.value })} placeholder="Sophia" /></div><div><label className={labelClass}>Last name</label><input className={fieldClass} value={passenger.lastName} onChange={(event) => setPassenger({ ...passenger, lastName: event.target.value })} placeholder="Demo" /></div><div><label className={labelClass}>Email address</label><input className={fieldClass} type="email" value={passenger.email} onChange={(event) => setPassenger({ ...passenger, email: event.target.value })} placeholder="sophia@example.com" /></div><div><label className={labelClass}>Phone number</label><input className={fieldClass} value={passenger.phone} onChange={(event) => setPassenger({ ...passenger, phone: event.target.value })} placeholder="+1 202 555 0144" /></div></div><div className="mt-5 flex items-start gap-3 rounded-xl bg-[#F7F9FC] p-4 text-sm text-[#52627A]"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[#3B9B73]" />Your information is encrypted and only used to issue your booking.</div><button disabled={!passenger.firstName || !passenger.lastName || !passenger.email} onClick={() => setStep("payment")} className="mt-5 w-full rounded-xl bg-[#2F72E8] px-4 py-3 font-semibold text-white disabled:opacity-50">Continue to payment</button></div><BookingSummary flight={selectedFlight} seat={selectedSeatData} /></section>}
+
+        {step === "payment" && selectedFlight && <section className="mx-auto grid max-w-4xl gap-5 lg:grid-cols-[1.1fr_.9fr]"><div className="rounded-2xl border bg-white p-5" style={{ borderColor: "var(--kv-border-light)" }}><button onClick={() => setStep("passenger")} className="mb-4 flex items-center gap-2 text-sm font-semibold text-[#2F72E8]"><ArrowLeft className="h-4 w-4" /> Back to passenger details</button><div className="mb-5 flex items-center gap-3"><div className="rounded-xl bg-[#E7F0FF] p-3 text-[#2F72E8]"><WalletCards className="h-5 w-5" /></div><div><h1 className="text-2xl font-bold text-[#17243A]">Pay with crypto</h1><p className="text-sm text-[#6D7D93]">Secure demo checkout with live-wallet support ready.</p></div></div><div className="grid gap-3 sm:grid-cols-3">{supportedCryptos.slice(0, 3).map((coin) => <button key={coin.symbol} onClick={() => setCrypto(coin.symbol)} className={cn("rounded-xl border p-4 text-left", crypto === coin.symbol ? "border-[#2F72E8] bg-[#E7F0FF]" : "bg-white")}><div className="text-lg font-bold text-[#17243A]">{coin.symbol}</div><div className="mt-1 text-xs text-[#6D7D93]">{formatCryptoAmount(convertFromUSD(total, coin.symbol), coin.symbol)}</div></button>)}</div><div className="mt-5 rounded-2xl bg-[#F7F9FC] p-5"><div className="flex items-center justify-between"><span className="text-sm text-[#6D7D93]">Amount due</span><span className="text-2xl font-bold text-[#17243A]">${total.toLocaleString()} <small className="text-sm font-medium text-[#8A98AA]">USD</small></span></div><div className="mt-4 flex items-center justify-between border-t pt-4"><span className="text-sm text-[#6D7D93]">Paying with {crypto}</span><b className="text-[#2F72E8]">{formatCryptoAmount(cryptoAmount, crypto)}</b></div></div><div className="mt-5 flex items-start gap-3 rounded-xl border border-[#D9E3F4] p-4 text-sm text-[#52627A]"><CreditCard className="h-5 w-5 shrink-0 text-[#2F72E8]" />No funds move in demo mode. Connect a wallet later to enable on-chain settlement.</div><button onClick={completePayment} disabled={paymentStatus === "processing"} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#2F72E8] px-4 py-3 font-semibold text-white disabled:opacity-60">{paymentStatus === "processing" ? "Confirming payment…" : `Confirm payment · ${formatCryptoAmount(cryptoAmount, crypto)}`}</button></div><BookingSummary flight={selectedFlight} seat={selectedSeatData} /></section>}
+
+        {step === "confirmed" && selectedFlight && <section className="mx-auto max-w-2xl"><div className="rounded-3xl border bg-white p-6 text-center shadow-sm md:p-8" style={{ borderColor: "#CDE9DB" }}><div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#DDF4E8] text-[#3B9B73]"><CheckCircle2 className="h-9 w-9" /></div><p className="mt-4 text-sm font-semibold uppercase tracking-wider text-[#3B9B73]">Booking confirmed</p><h1 className="mt-2 text-3xl font-bold text-[#17243A]">Your trip is ready</h1><p className="mt-2 text-sm text-[#6D7D93]">A boarding pass has been issued for {passenger.firstName || "your passenger"}.</p><div className="my-6 rounded-2xl bg-[#17243A] p-5 text-left text-white"><div className="flex items-center justify-between"><div><p className="text-xs uppercase tracking-wider text-white/60">Boarding pass</p><p className="mt-1 text-xl font-bold">{selectedFlight.airline}</p></div><Plane className="h-7 w-7 text-[#8DB6FF]" /></div><div className="my-6 flex items-center justify-between"><div><b className="text-3xl">{selectedFlight.origin.code}</b><p className="text-xs text-white/60">{selectedFlight.departureTime}</p></div><div className="flex-1 px-4"><div className="h-px bg-white/30" /><p className="mt-2 text-center text-xs text-white/60">{selectedFlight.duration}</p></div><div className="text-right"><b className="text-3xl">{selectedFlight.destination.code}</b><p className="text-xs text-white/60">{selectedFlight.arrivalTime}</p></div></div><div className="grid grid-cols-3 gap-3 border-t border-white/15 pt-4 text-sm"><div><p className="text-xs text-white/60">Passenger</p><b>{passenger.lastName || "Demo"}</b></div><div><p className="text-xs text-white/60">Seat</p><b>{selectedSeat}</b></div><div><p className="text-xs text-white/60">Booking code</p><b>{bookingCode}</b></div></div></div><div className="flex flex-wrap justify-center gap-3"><button onClick={() => navigator.clipboard?.writeText(bookingCode)} className="inline-flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold text-[#52627A]"><Copy className="h-4 w-4" /> Copy booking code</button><button onClick={resetFlow} className="inline-flex items-center gap-2 rounded-xl bg-[#2F72E8] px-4 py-3 text-sm font-semibold text-white"><Sparkles className="h-4 w-4" /> Book another flight</button></div></div></section>}
       </div>
     </AppShell>
   );
+}
+
+function BookingSummary({ flight, seat }: { flight: FlightResult; seat?: Seat }) {
+  return <aside className="h-fit rounded-2xl border bg-white p-5" style={{ borderColor: "var(--kv-border-light)" }}><p className="text-xs font-semibold uppercase tracking-wider text-[#8A98AA]">Booking summary</p><div className="mt-3 flex items-center justify-between"><div><p className="text-2xl font-bold text-[#17243A]">{flight.origin.code}</p><p className="text-xs text-[#8A98AA]">{flight.departureTime}</p></div><ArrowRight className="h-4 w-4 text-[#2F72E8]" /><div className="text-right"><p className="text-2xl font-bold text-[#17243A]">{flight.destination.code}</p><p className="text-xs text-[#8A98AA]">{flight.arrivalTime}</p></div></div><div className="mt-4 space-y-2 border-t pt-4 text-sm text-[#6D7D93]"><div className="flex justify-between"><span>{flight.airline} · {flight.flightNumber}</span><Luggage className="h-4 w-4" /></div><div className="flex justify-between"><span>Seat</span><b className="text-[#17243A]">{seat?.id || "Not selected"}</b></div><div className="flex justify-between"><span>Total</span><b className="text-lg text-[#2F72E8]">${(flight.price + (seat?.price || 0)).toLocaleString()}</b></div></div></aside>;
 }
