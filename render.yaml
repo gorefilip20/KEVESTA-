@@ -1,0 +1,52 @@
+services:
+  - type: web
+    name: kevesta-staging
+    runtime: node
+    plan: starter
+    region: frankfurt
+    branch: claude/kevesta-app-build-h9wsdi
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
+    healthCheckPath: /
+    autoDeploy: false
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_APP_URL
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: COLUMN_API_KEY
+        sync: false
+      - key: COLUMN_API_BASE
+        value: https://api.column.com
+      - key: COLUMN_ACH_TRANSFER_PATH
+        value: /v1/ach/transfers
+      - key: COLUMN_RECEIVING_ACCOUNT_ID
+        sync: false
+      - key: COLUMN_WEBHOOK_SECRET
+        sync: false
+      - key: CRYPTO_QUOTE_SECRET
+        sync: false
+      - key: CRYPTO_QUOTE_TTL_SECONDS
+        value: "120"
+      - key: CRYPTO_RPC_MAINNET
+        sync: false
+      - key: NEXT_PUBLIC_MERCHANT_WALLET
+        sync: false
+      - key: NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_SECURE
+        value: "false"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: MONITORING_SECRET
+        sync: false

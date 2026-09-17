@@ -13,7 +13,8 @@ function transporter() {
 export async function issueEmailToken(userId: string, type: "verification" | "password_reset") {
   const token = crypto.randomBytes(32).toString("base64url");
   await query("delete from auth_email_tokens where user_id = $1 and token_type = $2 and consumed_at is null", [userId, type]);
-  await query("insert into auth_email_tokens (user_id, token_hash, token_type, expires_at) values ($1, $2, $3, now() + ($4 * interval '1 minute'))", [userId, tokenHash(token), type, type === "verification" ? 60 : 30]);
+  const expiresAt = new Date(Date.now() + (type === "verification" ? 60 : 30) * 60 * 1000);
+  await query("insert into auth_email_tokens (user_id, token_hash, token_type, expires_at) values ($1, $2, $3, $4)", [userId, tokenHash(token), type, expiresAt]);
   return token;
 }
 

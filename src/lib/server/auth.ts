@@ -35,7 +35,8 @@ function tokenHash(token: string) { return crypto.createHash("sha256").update(to
 
 export async function createSession(userId: string) {
   const token = crypto.randomBytes(32).toString("base64url");
-  await query("insert into sessions (user_id, token_hash, expires_at) values ($1, $2, now() + ($3 * interval '1 day'))", [userId, tokenHash(token), SESSION_DAYS]);
+  const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
+  await query("insert into sessions (user_id, token_hash, expires_at) values ($1, $2, $3)", [userId, tokenHash(token), expiresAt]);
   return token;
 }
 

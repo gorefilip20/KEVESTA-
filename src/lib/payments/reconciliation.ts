@@ -13,8 +13,10 @@ const statusFor = (event: ColumnEvent) => {
 };
 
 async function claimEvent(client: PoolClient, event: ColumnEvent) {
+  const existing = await client.query("select id from provider_events where provider = 'column' and event_id = $1", [event.id]);
+  if (existing.rows.length > 0) return false;
   const result = await client.query("insert into provider_events (provider, event_id, event_type, payload) values ('column', $1, $2, $3) on conflict (provider, event_id) do nothing returning id", [event.id, event.type || "unknown", JSON.stringify(event)]);
-  return result.rowCount === 1;
+  return result.rows.length === 1;
 }
 
 export async function reconcileColumnEvent(event: ColumnEvent): Promise<ReconciliationResult> {
@@ -33,7 +35,7 @@ export async function reconcileColumnEvent(event: ColumnEvent): Promise<Reconcil
       return { duplicate: false, matched: false, status: mapped.payment };
     }
     if (mapped.rank >= payment.status_rank) {
-      await client.query("update payments set status = $1, status_rank = $2, metadata = metadata || $3::jsonb, updated_at = now() where provider = 'column' and provider_payment_id = $4", [mapped.payment, mapped.rank, JSON.stringify({ lastEventId: event.id, lastEventType: event.type || "unknown" }), providerPaymentId]);
+      await client.query("update payments set status = $1, status_rank = $2, updated_at = now() where provider = 'column' and provider_payment_id = $3", [mapped.payment, mapped.rank, providerPaymentId]);
       await client.query("update bookings set status = $1, status_rank = $2, updated_at = now() where id = $3 and status_rank <= $2", [mapped.booking, mapped.rank, payment.booking_id]);
       await client.query("update booking_intents set status = case when $1 = 'paid' then 'paid' when $1 = 'failed' then 'cancelled' else 'payment_pending' end where id = (select intent_id from bookings where id = $2) and status <> 'paid'", [mapped.booking, payment.booking_id]);
     }

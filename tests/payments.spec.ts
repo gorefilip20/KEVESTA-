@@ -1,4 +1,6 @@
 import { test, expect } from "@playwright/test";
+import crypto from "node:crypto";
+import { simpleParser } from "mailparser";
 
 const checkoutUrl = "/checkout?type=flight&id=FL-LHRJFK-0-1";
 
@@ -72,4 +74,40 @@ test("optional crypto mainnet receipt verification accepts only configured test 
   const body = await response.json();
   expect(body.success).toBe(true);
   expect(body.status).toBe("paid");
+});
+
+test("local mock stack runs the authenticated ACH lifecycle end to end", async ({ request }) => {
+  test.skip(!process.env.LOCAL_INTEGRATION, "Run through the local mock stack command");
+  const email = `local-${Date.now()}@kevesta.test`;
+  const signup = await request.post("/api/auth/signup", { data: { name: "Local Traveler", email, password: "local-password-123" } });
+  expect(signup.status()).toBe(201);
+  const signupCookie = signup.headers()["set-cookie"];
+  expect(signupCookie).toBeUndefined();
+  const emailResponse = await request.get("http://127.0.0.1:4011/__test/emails");
+  const emailBody = await emailResponse.json();
+  expect(emailBody.messages.length).toBeGreaterThan(0);
+  const parsedEmail = await simpleParser(emailBody.messages.at(-1) || "");
+  const verificationToken = /verify-email\?token=([^&\s"<]+)/.exec(typeof parsedEmail.html === "string" ? parsedEmail.html : "")?.[1];
+  expect(verificationToken).toBeTruthy();
+  const verified = await request.post("/api/auth/verify-email", { data: { token: decodeURIComponent(verificationToken!) } });
+  expect(verified.status()).toBe(200);
+  const login = await request.post("/api/auth/login", { data: { email, password: "local-password-123" } });
+  expect(login.status()).toBe(200);
+  const cookie = login.headers()["set-cookie"];
+  expect(cookie).toContain("kevesta_session=");
+  const intent = await request.post("/api/bookings/intents", { headers: { Cookie: cookie }, data: { itemType: "apartment", itemId: "APT-0000" } });
+  expect(intent.status()).toBe(201);
+  const intentBody = await intent.json();
+  const payment = await request.post("/api/payments", { headers: { Cookie: cookie, "Idempotency-Key": `local-${Date.now()}` }, data: { intentId: intentBody.intent.id, customerName: "Local Traveler", customerEmail: email } });
+  expect(payment.status()).toBe(200);
+  const paymentBody = await payment.json();
+  expect(paymentBody.payment.mode).toBe("column");
+  const event = { id: `evt_local_${Date.now()}`, type: "ach.outgoing_transfer.completed", data: { id: paymentBody.payment.paymentId, status: "completed" } };
+  const raw = JSON.stringify(event);
+  const signature = crypto.createHmac("sha256", "local-column-secret").update(raw).digest("hex");
+  const webhook = await request.post("/api/payments/webhook", { headers: { "Column-Signature": signature }, data: event });
+  expect(webhook.status()).toBe(200);
+  expect((await webhook.json()).status).toBe("paid");
+  const duplicate = await request.post("/api/payments/webhook", { headers: { "Column-Signature": signature }, data: event });
+  expect((await duplicate.json()).duplicate).toBe(true);
 });

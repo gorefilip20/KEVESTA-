@@ -52,6 +52,7 @@ Install the browser used by Playwright once, then run the local suite:
 npx playwright install chromium
 npm run test:e2e
 npm run test:email
+npm run test:integration:local
 ```
 
 `npm run test:email` starts an ephemeral local SMTP server, sends the verification and password-reset messages through the real Nodemailer delivery code, parses the captured MIME messages, and checks the KEVESTA branding, subjects, links, and tokens. It does not contact an external mail provider and does not require PostgreSQL.
@@ -59,6 +60,8 @@ npm run test:email
 The suite covers the dual-method checkout, safe behavior when Column is not configured, webhook signature rejection, and an optional Column sandbox initiation test. To enable the external sandbox case, copy `.env.test.example`, export the sandbox values in CI or locally, and use sandbox-only credentials. Never run the test with production credentials because it intentionally creates a payment request.
 
 The payment integration suite also checks the live crypto quote endpoint, rejects unauthenticated crypto confirmation, and supports optional authenticated Column and mined Ethereum settlement checks. The external cases require `E2E_SESSION_COOKIE`, `E2E_BOOKING_INTENT_ID`, and sandbox-only provider evidence. Use `CRYPTO_E2E_QUOTE_ID`, `CRYPTO_E2E_TX_HASH`, and `CRYPTO_E2E_WALLET` only with an already-mined test transaction and a test database; never point this suite at production money or a production wallet.
+
+`npm run test:integration:local` starts a pg-mem PostgreSQL-compatible database, local SMTP capture, a simulated Column ACH server, and the real Next.js application. It covers signup, email verification, login, server booking-intent creation, simulated Column payment initiation, signed webhook settlement, and duplicate webhook delivery without external credentials. Render staging can be created from [`render.yaml`](render.yaml); secret values are intentionally marked `sync: false` and must be entered in the Render dashboard or secret manager.
 
 ## Automated payment monitoring
 
