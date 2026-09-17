@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import {
   Compass,
   MapPin,
@@ -14,49 +15,25 @@ import {
   Sparkles,
   Plane,
   Building2,
+  CheckCircle2,
+  CircleAlert,
+  Loader2,
 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import StatCard from "@/components/ui/StatCard";
 import { useAppStore } from "@/lib/store";
 import { countries } from "@/data/countries";
 
-const recentActivities = [
-  {
-    icon: "✈️",
-    title: "London Itinerary",
-    description: "JFK → LHR reserved with ETH",
-    time: "1 hour ago",
-    type: "flight",
-  },
-  {
-    icon: "🇯🇵",
-    title: "Japan Dossier",
-    description: "Transport and cultural brief reviewed",
-    time: "2 hours ago",
-    type: "travel",
-  },
-  {
-    icon: "🏠",
-    title: "Parisian Retreat",
-    description: "Arts District loft shortlisted",
-    time: "4 hours ago",
-    type: "apartment",
-  },
-  {
-    icon: "🚕",
-    title: "Singapore Transit",
-    description: "Local mobility options curated",
-    time: "5 hours ago",
-    type: "services",
-  },
-  {
-    icon: "💬",
-    title: "Account Concierge",
-    description: "Credential reset handled seamlessly",
-    time: "1 day ago",
-    type: "support",
-  },
-];
+type Booking = { id: string; item_type: string; item_title: string; amount: number; currency: string; status: string; updated_at: string; provider: string | null; provider_payment_id: string | null; payment_status: string | null };
+
+const statusCopy: Record<string, { label: string; tone: string }> = {
+  paid: { label: "Confirmed", tone: "var(--kv-success)" },
+  payment_pending: { label: "Payment pending", tone: "var(--kv-warning)" },
+  failed: { label: "Payment failed", tone: "var(--kv-error)" },
+  cancelled: { label: "Cancelled", tone: "var(--kv-text-tertiary)" },
+  refunded: { label: "Refunded", tone: "var(--kv-primary-light)" },
+  intent_created: { label: "Ready to pay", tone: "var(--kv-warning)" },
+};
 
 const quickActions = [
   {
@@ -99,6 +76,20 @@ const quickActions = [
 export default function DashboardPage() {
   const { currentCountry } = useAppStore();
   const country = countries.find((c) => c.code === currentCountry);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [bookingsLoading, setBookingsLoading] = useState(true);
+  const [bookingsError, setBookingsError] = useState("");
+
+  useEffect(() => {
+    fetch("/api/bookings")
+      .then(async (response) => {
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "Trips are unavailable.");
+        setBookings(payload.bookings || []);
+      })
+      .catch((error) => setBookingsError(error instanceof Error ? error.message : "Trips are unavailable."))
+      .finally(() => setBookingsLoading(false));
+  }, []);
 
   return (
     <AppShell title="Overview">
@@ -181,63 +172,29 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
-          <div
-            className="lg:col-span-2 rounded-xl border"
-            style={{
-              background: "var(--kv-surface)",
-              borderColor: "var(--kv-border)",
-            }}
-          >
-            <div
-              className="flex items-center justify-between border-b px-5 py-4"
-              style={{ borderColor: "var(--kv-border)" }}
-            >
-              <h3 className="heritage-heading font-semibold" style={{ color: "var(--kv-text)" }}>
-                Recent Activity
-              </h3>
-              <button
-                className="text-sm font-medium"
-                style={{ color: "var(--kv-primary)" }}
-              >
-                View all
-              </button>
+          <div className="lg:col-span-2 rounded-xl border" style={{ background: "var(--kv-surface)", borderColor: "var(--kv-border)" }}>
+            <div className="flex items-center justify-between border-b px-5 py-4" style={{ borderColor: "var(--kv-border)" }}>
+              <div>
+                <h3 className="heritage-heading font-semibold" style={{ color: "var(--kv-text)" }}>My Trips</h3>
+                <p className="mt-0.5 text-xs" style={{ color: "var(--kv-text-secondary)" }}>Your booking and payment status, in one place.</p>
+              </div>
+              <Link href="/flights" className="text-sm font-medium" style={{ color: "var(--kv-primary)" }}>Plan a trip</Link>
             </div>
-            <div className="divide-y" style={{ borderColor: "var(--kv-border-light)" }}>
-              {recentActivities.map((activity, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-4 px-5 py-3.5 transition-colors"
-                  style={{}}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLElement).style.background = "var(--kv-surface-hover)";
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLElement).style.background = "transparent";
-                  }}
-                >
-                  <div
-                    className="flex h-10 w-10 items-center justify-center rounded-xl text-lg"
-                    style={{ background: "var(--kv-bg-tertiary)" }}
-                  >
-                    {activity.icon}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium" style={{ color: "var(--kv-text)" }}>
-                      {activity.title}
-                    </p>
-                    <p className="text-xs" style={{ color: "var(--kv-text-secondary)" }}>
-                      {activity.description}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-3 w-3" style={{ color: "var(--kv-text-tertiary)" }} />
-                    <span className="text-xs" style={{ color: "var(--kv-text-tertiary)" }}>
-                      {activity.time}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
+            {bookingsLoading ? (
+              <div className="flex items-center gap-2 px-5 py-10 text-sm" style={{ color: "var(--kv-text-secondary)" }}><Loader2 className="h-4 w-4 animate-spin" /> Loading your trips…</div>
+            ) : bookingsError ? (
+              <div className="m-5 rounded-xl border p-4 text-sm" style={{ borderColor: "var(--kv-border)", color: "var(--kv-text-secondary)" }}><p>{bookingsError}</p><Link href="/login" className="mt-2 inline-block font-semibold" style={{ color: "var(--kv-primary)" }}>Sign in to view trips</Link></div>
+            ) : bookings.length === 0 ? (
+              <div className="px-5 py-10"><p className="text-sm font-medium" style={{ color: "var(--kv-text)" }}>Your next chapter starts here.</p><p className="mt-1 max-w-md text-sm" style={{ color: "var(--kv-text-secondary)" }}>Book a flight, stay, or local service and KEVESTA will keep the payment status and next steps connected.</p><Link href="/flights" className="mt-4 inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white" style={{ background: "var(--kv-primary)" }}>Explore flights <ArrowRight className="h-4 w-4" /></Link></div>
+            ) : (
+              <div className="divide-y" style={{ borderColor: "var(--kv-border-light)" }}>
+                {bookings.slice(0, 5).map((booking) => {
+                  const status = statusCopy[booking.status] || { label: booking.status, tone: "var(--kv-text-secondary)" };
+                  const Icon = booking.status === "paid" ? CheckCircle2 : booking.status === "failed" ? CircleAlert : Clock;
+                  return <div key={booking.id} className="flex items-center gap-4 px-5 py-4"><div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: `${status.tone}18`, color: status.tone }}><Icon className="h-5 w-5" /></div><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium" style={{ color: "var(--kv-text)" }}>{booking.item_title}</p><p className="text-xs" style={{ color: "var(--kv-text-secondary)" }}>{booking.provider ? `${booking.provider.toUpperCase()} · ` : ""}{new Intl.NumberFormat("en-US", { style: "currency", currency: booking.currency }).format(booking.amount)} · {new Date(booking.updated_at).toLocaleDateString()}</p></div><div className="text-right"><span className="text-xs font-semibold" style={{ color: status.tone }}>{status.label}</span>{booking.status === "failed" && <Link href="/support" className="mt-1 block text-xs font-medium" style={{ color: "var(--kv-primary)" }}>Get help</Link>}</div></div>;
+                })}
+              </div>
+            )}
           </div>
 
           <div
