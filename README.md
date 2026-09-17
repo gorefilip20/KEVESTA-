@@ -32,6 +32,19 @@ Copy `.env.example` to `.env.local` and configure `COLUMN_API_KEY`, `COLUMN_RECE
 
 The checkout returns a clearly labelled setup state when Column is not configured; this is intentional and safer than a demo payment that looks settled.
 
+Crypto checkout is available beside bank payment for flights, apartments, and other checkout links. It currently supports ETH, USDC, and USDT on Ethereum mainnet through a connected EVM wallet. Configure `NEXT_PUBLIC_MERCHANT_WALLET` with a valid receiving address. A crypto booking is only treated as confirmed after the wallet transaction receives an on-chain receipt; KEVESTA never asks users for seed phrases or private keys. Testnet support should be added before offering a public crypto beta.
+
+## Automated payment testing
+
+Install the browser used by Playwright once, then run the local suite:
+
+```bash
+npx playwright install chromium
+npm run test:e2e
+```
+
+The suite covers the dual-method checkout, safe behavior when Column is not configured, webhook signature rejection, and an optional Column sandbox initiation test. To enable the external sandbox case, copy `.env.test.example`, export the sandbox values in CI or locally, and use sandbox-only credentials. Never run the test with production credentials because it intentionally creates a payment request.
+
 ## Cofounder launch priorities
 
 The next growth milestone should connect confirmed payment events to a durable database record, booking inventory, receipts, refunds, and customer notifications. Before public launch, add authentication and authorization around customer bookings, rate limiting on payment and support routes, structured audit logs, observability, privacy and terms pages, and end-to-end tests covering duplicate requests, failed transfers, returns, and webhook replay. Instrument the funnel from destination search to payment initiation and confirmed booking so product decisions are based on conversion and settlement data.
