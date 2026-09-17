@@ -5,8 +5,22 @@ create table if not exists users (
   email text not null unique,
   name text not null,
   password_hash text not null,
+  email_verified_at timestamptz,
   created_at timestamptz not null default now()
 );
+alter table users add column if not exists email_verified_at timestamptz;
+
+create table if not exists auth_email_tokens (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id) on delete cascade,
+  token_hash text not null unique,
+  token_type text not null check (token_type in ('verification', 'password_reset')),
+  expires_at timestamptz not null,
+  consumed_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create index if not exists auth_email_tokens_lookup_idx on auth_email_tokens(token_hash, token_type);
+create index if not exists auth_email_tokens_user_idx on auth_email_tokens(user_id, token_type);
 
 create table if not exists sessions (
   id uuid primary key default gen_random_uuid(),

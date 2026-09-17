@@ -24,7 +24,7 @@ npm run build
 
 Secure checkout now requires a server session. Configure `DATABASE_URL` with a PostgreSQL connection string, run `db/schema.sql`, and restart the app. Signup and login issue an httpOnly, Secure-in-production, SameSite session cookie. Booking intents are created server-side, tied to the authenticated user, recalculated from server-owned catalog data, and expire after 15 minutes. Payment initiation accepts an intent ID rather than trusting a browser-supplied amount or title.
 
-The database layer is intentionally explicit and provider-neutral. It can run on managed PostgreSQL providers such as Neon, Supabase Postgres, Railway, Render, or an internal PostgreSQL cluster. Before production, add email verification, password-reset flows, login rate limiting, MFA for staff, and persistent booking/payment state transitions.
+The database layer is intentionally explicit and provider-neutral. It can run on managed PostgreSQL providers such as Neon, Supabase Postgres, Railway, Render, or an internal PostgreSQL cluster. Email verification and password reset use SHA-256 hashes of single-use database tokens. Verification links expire after 60 minutes; password reset links expire after 30 minutes. Configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_SECURE`, and `EMAIL_FROM` for delivery. In development without SMTP, the server logs a local-only link instead of sending an email. Before production, add login rate limiting, MFA for staff, and persistent booking/payment state transitions.
 
 ## Payments
 
