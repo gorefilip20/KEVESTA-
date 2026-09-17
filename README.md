@@ -2,6 +2,8 @@
 
 KEVESTA is an AI travel and relocation assistant for destination guidance, flights, curated stays, local services, and support.
 
+See the [product roadmap and next-sprint plan](ROADMAP.md) for the recommended sequence toward durable bookings and a differentiated relocation workspace.
+
 ## Local development
 
 Install dependencies and run the development server:
