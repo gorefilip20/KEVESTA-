@@ -74,10 +74,10 @@ function CheckoutContent() {
 
   useEffect(() => {
     if (!cryptoConfirmed || !cryptoHash || !quote) return;
-    fetch("/api/payments/crypto/confirm", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quoteId: quote.quoteId, txHash: cryptoHash }) })
+    fetch("/api/payments/crypto/confirm", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quoteId: quote.quoteId, txHash: cryptoHash, walletAddress: address, intentId: intent?.id }) })
       .then((response) => { if (response.ok) setCryptoServerConfirmed(true); })
       .catch(() => undefined);
-  }, [cryptoConfirmed, cryptoHash, quote]);
+  }, [address, cryptoConfirmed, cryptoHash, intent, quote]);
 
   useEffect(() => {
     if (method !== "crypto") return;

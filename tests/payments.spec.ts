@@ -25,6 +25,11 @@ test("payment monitoring endpoint rejects unauthenticated access", async ({ requ
   expect(response.status()).toBe(401);
 });
 
+test("crypto settlement confirmation rejects unauthenticated access", async ({ request }) => {
+  const response = await request.post("/api/payments/crypto/confirm", { data: { quoteId: "invalid", txHash: `0x${"0".repeat(64)}` } });
+  expect(response.status()).toBe(401);
+});
+
 test("Column sandbox payment initiation works when sandbox credentials are configured", async ({ request }) => {
   test.skip(!process.env.COLUMN_API_KEY || !process.env.COLUMN_RECEIVING_ACCOUNT_ID || !process.env.COLUMN_WEBHOOK_SECRET, "Set Column sandbox credentials to run this external test");
   const response = await request.post("/api/payments", {
