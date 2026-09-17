@@ -29,6 +29,7 @@ type Booking = { id: string; item_type: string; item_title: string; amount: numb
 const statusCopy: Record<string, { label: string; tone: string }> = {
   paid: { label: "Confirmed", tone: "var(--kv-success)" },
   payment_pending: { label: "Payment pending", tone: "var(--kv-warning)" },
+  refund_pending: { label: "Refund pending", tone: "var(--kv-warning)" },
   failed: { label: "Payment failed", tone: "var(--kv-error)" },
   cancelled: { label: "Cancelled", tone: "var(--kv-text-tertiary)" },
   refunded: { label: "Refunded", tone: "var(--kv-primary-light)" },
@@ -79,6 +80,21 @@ export default function DashboardPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [bookingsLoading, setBookingsLoading] = useState(true);
   const [bookingsError, setBookingsError] = useState("");
+  const [cancelling, setCancelling] = useState<string | null>(null);
+
+  async function cancelBooking(booking: Booking) {
+    const prompt = booking.status === "paid" ? "Request a refund for this booking? The booking will remain refund-pending until the provider confirms it." : "Cancel this booking?";
+    if (!window.confirm(prompt)) return;
+    setCancelling(booking.id);
+    try {
+      const response = await fetch(`/api/bookings/${booking.id}/cancel`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason: "customer_requested" }) });
+      const payload = await response.json();
+      if (!response.ok && response.status !== 202) throw new Error(payload.error || "Cancellation unavailable.");
+      setBookings((current) => current.map((item) => item.id === booking.id ? { ...item, status: payload.status } : item));
+    } catch (error) {
+      setBookingsError(error instanceof Error ? error.message : "Cancellation unavailable.");
+    } finally { setCancelling(null); }
+  }
 
   useEffect(() => {
     fetch("/api/bookings")
@@ -191,7 +207,7 @@ export default function DashboardPage() {
                 {bookings.slice(0, 5).map((booking) => {
                   const status = statusCopy[booking.status] || { label: booking.status, tone: "var(--kv-text-secondary)" };
                   const Icon = booking.status === "paid" ? CheckCircle2 : booking.status === "failed" ? CircleAlert : Clock;
-                  return <div key={booking.id} className="flex items-center gap-4 px-5 py-4"><div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: `${status.tone}18`, color: status.tone }}><Icon className="h-5 w-5" /></div><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium" style={{ color: "var(--kv-text)" }}>{booking.item_title}</p><p className="text-xs" style={{ color: "var(--kv-text-secondary)" }}>{booking.provider ? `${booking.provider.toUpperCase()} · ` : ""}{new Intl.NumberFormat("en-US", { style: "currency", currency: booking.currency }).format(booking.amount)} · {new Date(booking.updated_at).toLocaleDateString()}</p></div><div className="text-right"><span className="text-xs font-semibold" style={{ color: status.tone }}>{status.label}</span>{booking.status === "failed" && <Link href="/support" className="mt-1 block text-xs font-medium" style={{ color: "var(--kv-primary)" }}>Get help</Link>}</div></div>;
+                  return <div key={booking.id} className="flex items-center gap-4 px-5 py-4"><div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: `${status.tone}18`, color: status.tone }}><Icon className="h-5 w-5" /></div><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium" style={{ color: "var(--kv-text)" }}>{booking.item_title}</p><p className="text-xs" style={{ color: "var(--kv-text-secondary)" }}>{booking.provider ? `${booking.provider.toUpperCase()} · ` : ""}{new Intl.NumberFormat("en-US", { style: "currency", currency: booking.currency }).format(booking.amount)} · {new Date(booking.updated_at).toLocaleDateString()}</p></div><div className="text-right"><span className="text-xs font-semibold" style={{ color: status.tone }}>{status.label}</span>{booking.status === "failed" && <Link href="/support" className="mt-1 block text-xs font-medium" style={{ color: "var(--kv-primary)" }}>Get help</Link>}{["paid", "payment_pending", "intent_created"].includes(booking.status) && <button onClick={() => cancelBooking(booking)} disabled={cancelling === booking.id} className="mt-1 block text-xs font-medium disabled:opacity-50" style={{ color: "var(--kv-primary)" }}>{cancelling === booking.id ? "Working…" : booking.status === "paid" ? "Request refund" : "Cancel booking"}</button>}</div></div>;
                 })}
               </div>
             )}

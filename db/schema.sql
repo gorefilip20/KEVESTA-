@@ -57,13 +57,15 @@ create table if not exists bookings (
   item_title text not null,
   amount_cents integer not null check (amount_cents > 0),
   currency text not null default 'USD',
-  status text not null default 'intent_created' check (status in ('intent_created', 'payment_pending', 'paid', 'failed', 'cancelled', 'refunded', 'expired')),
+  status text not null default 'intent_created' check (status in ('intent_created', 'payment_pending', 'paid', 'refund_pending', 'failed', 'cancelled', 'refunded', 'expired')),
   status_rank integer not null default 10,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 create index if not exists bookings_user_id_idx on bookings(user_id);
 create index if not exists bookings_status_idx on bookings(status);
+alter table bookings drop constraint if exists bookings_status_check;
+alter table bookings add constraint bookings_status_check check (status in ('intent_created', 'payment_pending', 'paid', 'refund_pending', 'failed', 'cancelled', 'refunded', 'expired'));
 
 create table if not exists payments (
   id uuid primary key default gen_random_uuid(),
@@ -73,13 +75,15 @@ create table if not exists payments (
   idempotency_key text unique,
   amount_cents integer not null check (amount_cents > 0),
   currency text not null,
-  status text not null default 'pending' check (status in ('pending', 'processing', 'paid', 'failed', 'refunded')),
+  status text not null default 'pending' check (status in ('pending', 'processing', 'paid', 'refund_pending', 'failed', 'refunded')),
   status_rank integer not null default 10,
   metadata jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 create index if not exists payments_booking_id_idx on payments(booking_id);
+alter table payments drop constraint if exists payments_status_check;
+alter table payments add constraint payments_status_check check (status in ('pending', 'processing', 'paid', 'refund_pending', 'failed', 'refunded'));
 
 create table if not exists provider_events (
   id uuid primary key default gen_random_uuid(),
@@ -90,4 +94,16 @@ create table if not exists provider_events (
   received_at timestamptz not null default now(),
   processed_at timestamptz,
   unique (provider, event_id)
+);
+
+create table if not exists refund_requests (
+  id uuid primary key default gen_random_uuid(),
+  booking_id uuid not null unique references bookings(id) on delete restrict,
+  payment_id uuid not null references payments(id) on delete restrict,
+  provider text not null,
+  provider_refund_id text unique,
+  status text not null default 'pending' check (status in ('pending', 'submitted', 'succeeded', 'failed')),
+  reason text not null default 'customer_requested',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );

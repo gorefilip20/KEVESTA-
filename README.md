@@ -28,6 +28,8 @@ Secure checkout now requires a server session. Configure `DATABASE_URL` with a P
 
 The database layer is intentionally explicit and provider-neutral. It can run on managed PostgreSQL providers such as Neon, Supabase Postgres, Railway, Render, or an internal PostgreSQL cluster. Email verification and password reset use SHA-256 hashes of single-use database tokens. Verification links expire after 60 minutes; password reset links expire after 30 minutes. Configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_SECURE`, and `EMAIL_FROM` for delivery. In development without SMTP, the server logs a local-only link instead of sending an email. Before production, add login rate limiting, MFA for staff, and persistent booking/payment state transitions.
 
+Users can cancel unpaid bookings from the dashboard. Paid Column bookings can request a provider refund when `COLUMN_REFUND_PATH` is configured; KEVESTA marks them `refund_pending` only after the provider accepts the request and changes them to `refunded` only after a verified provider event. Crypto refund requests are recorded as `refund_pending` for manual review because KEVESTA must not send funds to an unverified destination automatically.
+
 ## Payments
 
 Checkout uses a server-side Column adapter for bank payments. The browser never receives the Column API key and KEVESTA never treats a client-side response as proof of settlement. A booking remains pending until a signed provider event is received at:

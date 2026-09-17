@@ -22,6 +22,8 @@ services:
         value: https://api.column.com
       - key: COLUMN_ACH_TRANSFER_PATH
         value: /v1/ach/transfers
+      - key: COLUMN_REFUND_PATH
+        sync: false
       - key: COLUMN_RECEIVING_ACCOUNT_ID
         sync: false
       - key: COLUMN_WEBHOOK_SECRET
