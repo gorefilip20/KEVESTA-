@@ -49,7 +49,10 @@ Install the browser used by Playwright once, then run the local suite:
 ```bash
 npx playwright install chromium
 npm run test:e2e
+npm run test:email
 ```
+
+`npm run test:email` starts an ephemeral local SMTP server, sends the verification and password-reset messages through the real Nodemailer delivery code, parses the captured MIME messages, and checks the KEVESTA branding, subjects, links, and tokens. It does not contact an external mail provider and does not require PostgreSQL.
 
 The suite covers the dual-method checkout, safe behavior when Column is not configured, webhook signature rejection, and an optional Column sandbox initiation test. To enable the external sandbox case, copy `.env.test.example`, export the sandbox values in CI or locally, and use sandbox-only credentials. Never run the test with production credentials because it intentionally creates a payment request.
 
