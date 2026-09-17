@@ -1,6 +1,6 @@
 import { SMTPServer } from "smtp-server";
 import { simpleParser } from "mailparser";
-import { sendPasswordResetEmail, sendVerificationEmail } from "@/lib/server/email";
+import { sendPasswordResetEmail, sendRefundCompletedEmail, sendRefundRequestedEmail, sendVerificationEmail } from "@/lib/server/email";
 
 const messages: Buffer[] = [];
 const server = new SMTPServer({
@@ -30,11 +30,17 @@ async function main() {
   try {
     await sendVerificationEmail("traveler@example.com", "Amina", "verification-token-123");
     await sendPasswordResetEmail("traveler@example.com", "Amina", "reset-token-456");
-    assert(messages.length === 2, `expected 2 messages, received ${messages.length}`);
+    await sendRefundRequestedEmail("traveler@example.com", "Amina", "London relocation booking", "$249.00", "RF-REQUEST-123");
+    await sendRefundCompletedEmail("traveler@example.com", "Amina", "London relocation booking", "$249.00", "RF-COMPLETE-456", "column_refund_789");
+    assert(messages.length === 4, `expected 4 messages, received ${messages.length}`);
     const verification = await simpleParser(messages[0]);
     const reset = await simpleParser(messages[1]);
+    const refundRequested = await simpleParser(messages[2]);
+    const refundCompleted = await simpleParser(messages[3]);
     assert(verification.subject === "Confirm your KEVESTA email", "verification subject mismatch");
     assert(reset.subject === "Reset your KEVESTA password", "reset subject mismatch");
+    assert(refundRequested.subject === "Your KEVESTA refund request is recorded", "refund request subject mismatch");
+    assert(refundCompleted.subject === "Your KEVESTA refund is complete", "refund completion subject mismatch");
     for (const [label, message, expectedToken] of [["verification", verification, "verification-token-123"], ["reset", reset, "reset-token-456"]] as const) {
       const html = typeof message.html === "string" ? message.html : "";
       assert(html.includes("KEVESTA"), `${label} email is missing KEVESTA branding`);
@@ -42,7 +48,11 @@ async function main() {
       assert(html.includes(expectedToken), `${label} email is missing its action token`);
       assert(html.includes("http://"), `${label} email is missing an action URL`);
     }
-    console.log("Email SMTP smoke test passed: verification and password-reset HTML delivered and rendered.");
+    const requestHtml = typeof refundRequested.html === "string" ? refundRequested.html : "";
+    const completedHtml = typeof refundCompleted.html === "string" ? refundCompleted.html : "";
+    assert(requestHtml.includes("RF-REQUEST-123") && requestHtml.includes("refund request"), "refund request email is missing receipt details");
+    assert(completedHtml.includes("RF-COMPLETE-456") && completedHtml.includes("column_refund_789"), "refund completion email is missing receipt details");
+    console.log("Email SMTP smoke test passed: auth and refund notifications delivered and rendered.");
   } finally { await close(); }
 }
 

@@ -107,3 +107,17 @@ create table if not exists refund_requests (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+create table if not exists financial_receipts (
+  id uuid primary key default gen_random_uuid(),
+  booking_id uuid not null references bookings(id) on delete restrict,
+  payment_id uuid not null references payments(id) on delete restrict,
+  refund_request_id uuid references refund_requests(id) on delete set null,
+  receipt_type text not null check (receipt_type in ('refund_requested', 'refund_completed')),
+  receipt_number text not null unique,
+  amount_cents integer not null check (amount_cents > 0),
+  currency text not null,
+  provider_reference text,
+  issued_at timestamptz not null default now(),
+  unique (booking_id, receipt_type)
+);

@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import nodemailer from "nodemailer";
 import { query } from "@/lib/server/db";
-import { passwordResetEmail, verificationEmail } from "@/lib/server/email-templates";
+import { passwordResetEmail, refundCompletedEmail, refundRequestedEmail, verificationEmail } from "@/lib/server/email-templates";
 
 function tokenHash(token: string) { return crypto.createHash("sha256").update(token).digest("hex"); }
 
@@ -32,6 +32,18 @@ export async function sendVerificationEmail(to: string, name: string, token: str
 export async function sendPasswordResetEmail(to: string, name: string, token: string) {
   const url = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/reset-password?token=${encodeURIComponent(token)}`;
   const message = passwordResetEmail(name, url);
+  return sendMail(to, message.subject, message.html, url);
+}
+
+export async function sendRefundRequestedEmail(to: string, name: string, bookingTitle: string, amount: string, receiptNumber: string) {
+  const url = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard`;
+  const message = refundRequestedEmail(name, bookingTitle, amount, receiptNumber, url);
+  return sendMail(to, message.subject, message.html, url);
+}
+
+export async function sendRefundCompletedEmail(to: string, name: string, bookingTitle: string, amount: string, receiptNumber: string, providerReference: string) {
+  const url = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard`;
+  const message = refundCompletedEmail(name, bookingTitle, amount, receiptNumber, providerReference, url);
   return sendMail(to, message.subject, message.html, url);
 }
 

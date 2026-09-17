@@ -30,6 +30,8 @@ The database layer is intentionally explicit and provider-neutral. It can run on
 
 Users can cancel unpaid bookings from the dashboard. Paid Column bookings can request a provider refund when `COLUMN_REFUND_PATH` is configured; KEVESTA marks them `refund_pending` only after the provider accepts the request and changes them to `refunded` only after a verified provider event. Crypto refund requests are recorded as `refund_pending` for manual review because KEVESTA must not send funds to an unverified destination automatically.
 
+Refund requests now create durable `financial_receipts` records and send a branded notification containing the receipt reference. When a verified Column refund-completed event arrives, KEVESTA creates a completion receipt, updates the refund request to `succeeded`, and sends a second branded email with the provider reference. Email delivery failures are logged without rolling back the financial state transition; the receipt and status remain authoritative for retry tooling.
+
 ## Payments
 
 Checkout uses a server-side Column adapter for bank payments. The browser never receives the Column API key and KEVESTA never treats a client-side response as proof of settlement. A booking remains pending until a signed provider event is received at:
