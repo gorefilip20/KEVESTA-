@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { claimWebhookEvent, verifyColumnSignature } from "@/lib/payments/column";
+import { recordPaymentMetric } from "@/lib/monitoring";
 
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
   const signature = request.headers.get("Column-Signature");
 
   if (!verifyColumnSignature(rawBody, signature)) {
+    recordPaymentMetric("column_webhook_invalid");
     return NextResponse.json({ error: "Invalid webhook signature" }, { status: 401 });
   }
 
@@ -15,8 +17,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Webhook event ID is required" }, { status: 400 });
     }
     if (!claimWebhookEvent(event.id)) {
+      recordPaymentMetric("column_webhook_duplicate", { eventId: event.id });
       return NextResponse.json({ received: true, duplicate: true });
     }
+    recordPaymentMetric("column_webhook_received", { eventId: event.id, type: event.type || "unknown" });
     console.info("Column payment event received", {
       id: event.id,
       type: event.type,

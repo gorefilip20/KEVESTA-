@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createCryptoQuote, type QuoteCurrency } from "@/lib/payments/crypto-quotes";
+import { recordPaymentMetric } from "@/lib/monitoring";
 
 const currencies = new Set<QuoteCurrency>(["ETH", "USDC", "USDT"]);
 
@@ -13,6 +14,7 @@ export async function GET(request: NextRequest) {
     const quote = await createCryptoQuote(amount, currency);
     return NextResponse.json({ success: true, quote }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
+    recordPaymentMetric("crypto_quote_provider_error", { currency });
     console.error("Crypto quote failed", error);
     return NextResponse.json({ error: "Live crypto pricing is temporarily unavailable." }, { status: 502 });
   }

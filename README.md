@@ -47,6 +47,10 @@ npm run test:e2e
 
 The suite covers the dual-method checkout, safe behavior when Column is not configured, webhook signature rejection, and an optional Column sandbox initiation test. To enable the external sandbox case, copy `.env.test.example`, export the sandbox values in CI or locally, and use sandbox-only credentials. Never run the test with production credentials because it intentionally creates a payment request.
 
+## Automated payment monitoring
+
+The protected endpoint `GET /api/monitoring/health` reports recent crypto quote provider errors, expired quote confirmations, invalid Column signatures, and duplicate webhook deliveries. Configure `MONITORING_SECRET` on the app and add `KEVESTA_MONITOR_URL` plus `KEVESTA_MONITORING_SECRET` as GitHub Actions repository secrets. The scheduled workflow in `.github/workflows/payment-monitor.yml` checks the endpoint every 15 minutes and fails when the recent window is degraded. Current alert thresholds are five quote-provider errors, five invalid signatures, or twenty-five duplicate webhook deliveries within fifteen minutes.
+
 ## Cofounder launch priorities
 
 The next growth milestone should connect confirmed payment events to a durable database record, booking inventory, receipts, refunds, and customer notifications. Before public launch, add authentication and authorization around customer bookings, rate limiting on payment and support routes, structured audit logs, observability, privacy and terms pages, and end-to-end tests covering duplicate requests, failed transfers, returns, and webhook replay. Instrument the funnel from destination search to payment initiation and confirmed booking so product decisions are based on conversion and settlement data.
