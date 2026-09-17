@@ -74,15 +74,6 @@ export function formatCryptoAmount(amount: number, symbol: string): string {
   return amount.toFixed(4);
 }
 
-export function generateTxHash(): string {
-  const chars = "0123456789abcdef";
-  let hash = "0x";
-  for (let i = 0; i < 64; i++) {
-    hash += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return hash;
-}
-
 export function shortenAddress(address: string): string {
   if (address.length <= 12) return address;
   return `${address.slice(0, 6)}...${address.slice(-4)}`;

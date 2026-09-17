@@ -321,13 +321,13 @@ export default function ApartmentDetailPage({
                 className="flex items-center justify-center gap-2 w-full rounded-xl py-3 text-sm font-semibold text-white transition-all hover:opacity-90"
                 style={{ background: "var(--kv-primary)" }}
               >
-                Book with Crypto
+                Continue to secure payment
                 <ArrowRight className="h-4 w-4" />
               </a>
 
               <div className="text-center">
                 <p className="text-xs" style={{ color: "var(--kv-text-tertiary)" }}>
-                  Pay securely with BTC, ETH, USDT and more
+                  Pay by bank with provider-verified settlement
                 </p>
               </div>
 

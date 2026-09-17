@@ -70,7 +70,7 @@ const quickActions = [
     href: "/flights",
     icon: Plane,
     label: "Flight Reservations",
-    description: "Search & book with crypto",
+    description: "Search & book securely",
     color: "#5B4180",
   },
   {
