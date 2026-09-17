@@ -31,14 +31,45 @@ test("crypto settlement confirmation rejects unauthenticated access", async ({ r
 });
 
 test("Column sandbox payment initiation works when sandbox credentials are configured", async ({ request }) => {
-  test.skip(!process.env.COLUMN_API_KEY || !process.env.COLUMN_RECEIVING_ACCOUNT_ID || !process.env.COLUMN_WEBHOOK_SECRET, "Set Column sandbox credentials to run this external test");
+  test.skip(!process.env.COLUMN_API_KEY || !process.env.COLUMN_RECEIVING_ACCOUNT_ID || !process.env.COLUMN_WEBHOOK_SECRET || !process.env.E2E_SESSION_COOKIE || !process.env.E2E_BOOKING_INTENT_ID, "Set sandbox credentials, an authenticated test cookie, and a fresh booking intent");
   const response = await request.post("/api/payments", {
-    headers: { "Content-Type": "application/json", "Idempotency-Key": `column-sandbox-${Date.now()}` },
-    data: { amount: Number(process.env.COLUMN_E2E_AMOUNT || 1), customerName: "Kevesta Sandbox", customerEmail: "sandbox@example.com", description: "Kevesta automated Column sandbox payment" },
+    headers: { "Content-Type": "application/json", "Idempotency-Key": `column-sandbox-${Date.now()}`, Cookie: process.env.E2E_SESSION_COOKIE! },
+    data: { intentId: process.env.E2E_BOOKING_INTENT_ID, customerName: "Kevesta Sandbox", customerEmail: "sandbox@example.com" },
   });
   expect(response.status()).toBe(200);
   const body = await response.json();
   expect(body.success).toBe(true);
   expect(body.payment.mode).toBe("column");
   expect(body.payment.paymentId).toBeTruthy();
+});
+
+test("live crypto quote endpoint returns a bounded quote", async ({ request }) => {
+  const response = await request.get("/api/payments/crypto/quote?amount=25&currency=USDC");
+  expect(response.status()).toBe(200);
+  const body = await response.json();
+  expect(body.success).toBe(true);
+  expect(body.quote.currency).toBe("USDC");
+  expect(body.quote.cryptoAmount).toBeGreaterThan(0);
+  expect(Date.parse(body.quote.expiresAt)).toBeGreaterThan(Date.now());
+});
+
+test("crypto settlement verification rejects an invalid transaction even with a session", async ({ request }) => {
+  test.skip(!process.env.E2E_SESSION_COOKIE || !process.env.E2E_BOOKING_INTENT_ID, "Set an authenticated test cookie and fresh booking intent");
+  const response = await request.post("/api/payments/crypto/confirm", {
+    headers: { "Content-Type": "application/json", Cookie: process.env.E2E_SESSION_COOKIE! },
+    data: { quoteId: "invalid-signed-quote", txHash: `0x${"0".repeat(64)}`, walletAddress: "0x0000000000000000000000000000000000000001", intentId: process.env.E2E_BOOKING_INTENT_ID },
+  });
+  expect([400, 409]).toContain(response.status());
+});
+
+test("optional crypto mainnet receipt verification accepts only configured test evidence", async ({ request }) => {
+  test.skip(!process.env.E2E_SESSION_COOKIE || !process.env.E2E_BOOKING_INTENT_ID || !process.env.CRYPTO_E2E_QUOTE_ID || !process.env.CRYPTO_E2E_TX_HASH || !process.env.CRYPTO_E2E_WALLET, "Provide a fresh quote, authenticated cookie, booking intent, and an already-mined test transaction");
+  const response = await request.post("/api/payments/crypto/confirm", {
+    headers: { "Content-Type": "application/json", Cookie: process.env.E2E_SESSION_COOKIE! },
+    data: { quoteId: process.env.CRYPTO_E2E_QUOTE_ID, txHash: process.env.CRYPTO_E2E_TX_HASH, walletAddress: process.env.CRYPTO_E2E_WALLET, intentId: process.env.E2E_BOOKING_INTENT_ID },
+  });
+  expect(response.status()).toBe(200);
+  const body = await response.json();
+  expect(body.success).toBe(true);
+  expect(body.status).toBe("paid");
 });

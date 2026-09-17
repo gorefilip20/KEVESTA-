@@ -58,6 +58,8 @@ npm run test:email
 
 The suite covers the dual-method checkout, safe behavior when Column is not configured, webhook signature rejection, and an optional Column sandbox initiation test. To enable the external sandbox case, copy `.env.test.example`, export the sandbox values in CI or locally, and use sandbox-only credentials. Never run the test with production credentials because it intentionally creates a payment request.
 
+The payment integration suite also checks the live crypto quote endpoint, rejects unauthenticated crypto confirmation, and supports optional authenticated Column and mined Ethereum settlement checks. The external cases require `E2E_SESSION_COOKIE`, `E2E_BOOKING_INTENT_ID`, and sandbox-only provider evidence. Use `CRYPTO_E2E_QUOTE_ID`, `CRYPTO_E2E_TX_HASH`, and `CRYPTO_E2E_WALLET` only with an already-mined test transaction and a test database; never point this suite at production money or a production wallet.
+
 ## Automated payment monitoring
 
 The protected endpoint `GET /api/monitoring/health` reports recent crypto quote provider errors, expired quote confirmations, invalid Column signatures, and duplicate webhook deliveries. Configure `MONITORING_SECRET` on the app and add `KEVESTA_MONITOR_URL` plus `KEVESTA_MONITORING_SECRET` as GitHub Actions repository secrets. The scheduled workflow in `.github/workflows/payment-monitor.yml` checks the endpoint every 15 minutes and fails when the recent window is degraded. Current alert thresholds are five quote-provider errors, five invalid signatures, or twenty-five duplicate webhook deliveries within fifteen minutes.
