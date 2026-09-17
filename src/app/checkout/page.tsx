@@ -61,7 +61,7 @@ function CheckoutContent() {
   const cryptoConfirmed = Boolean(cryptoHash && !confirming && cryptoStatus === "processing");
 
   useEffect(() => {
-    fetch("/api/bookings/intents", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ itemType: type, itemId }) })
+    fetch("/api/bookings/intents", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ itemType: type, itemId, origin: searchParams.get("origin") || "", destination: searchParams.get("destination") || "", departDate: searchParams.get("departDate") || "", cabinClass: searchParams.get("cabinClass") || "economy", passengers: Number(searchParams.get("passengers") || 1), seatPrice: Number(searchParams.get("seatPrice") || 0) }) })
       .then(async (response) => {
         const payload = await response.json();
         if (response.status === 401) { setAuthRequired(true); return; }
