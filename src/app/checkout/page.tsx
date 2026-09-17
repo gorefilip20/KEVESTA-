@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, ReactNode, Suspense, useMemo, useState } from "react";
+import { FormEvent, ReactNode, Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, CircleAlert, CreditCard, Loader2, LockKeyhole, ShieldCheck, WalletCards } from "lucide-react";
@@ -8,12 +8,13 @@ import { isAddress, parseEther, parseUnits } from "viem";
 import { useAccount, useChainId, useConnect, useSendTransaction, useSwitchChain, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 import { mainnet } from "wagmi/chains";
 import AppShell from "@/components/layout/AppShell";
-import { convertFromUSD, exchangeRates, formatCryptoAmount } from "@/data/crypto";
+import { formatCryptoAmount } from "@/data/crypto";
 import { ERC20_ABI, getTokenAddress } from "@/lib/web3/config";
 
 type Method = "bank" | "crypto";
 type CryptoCurrency = "ETH" | "USDC" | "USDT";
 type PaymentResult = { mode: "column" | "setup_required"; status: string; paymentId: string; message?: string };
+type CryptoQuote = { quoteId: string; currency: CryptoCurrency; cryptoAmount: number; rate: number; expiresAt: string };
 
 function CheckoutContent() {
   const searchParams = useSearchParams();
@@ -31,6 +32,9 @@ function CheckoutContent() {
   const [bankResult, setBankResult] = useState<PaymentResult | null>(null);
   const [cryptoHash, setCryptoHash] = useState<`0x${string}`>();
   const [cryptoStatus, setCryptoStatus] = useState<"idle" | "processing" | "confirmed">("idle");
+  const [cryptoServerConfirmed, setCryptoServerConfirmed] = useState(false);
+  const [quote, setQuote] = useState<CryptoQuote | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
   const [error, setError] = useState("");
 
   const { address, isConnected } = useAccount();
@@ -43,13 +47,39 @@ function CheckoutContent() {
 
   const merchantWallet = process.env.NEXT_PUBLIC_MERCHANT_WALLET || "";
   const cryptoConfigured = isAddress(merchantWallet);
-  const cryptoAmount = convertFromUSD(amount, cryptoCurrency);
+  const cryptoAmount = quote?.cryptoAmount || 0;
   const cryptoBusy = connecting || switching || sendingEth || sendingToken || confirming;
   const cryptoButtonLabel = isConnected
-    ? `Pay ${formatCryptoAmount(cryptoAmount, cryptoCurrency)} ${cryptoCurrency}`
+    ? quote ? `Pay ${formatCryptoAmount(cryptoAmount, cryptoCurrency)} ${cryptoCurrency}` : "Loading live quote…"
     : "Connect wallet to pay";
 
   const cryptoConfirmed = Boolean(cryptoHash && !confirming && cryptoStatus === "processing");
+
+  useEffect(() => {
+    if (!cryptoConfirmed || !cryptoHash || !quote) return;
+    fetch("/api/payments/crypto/confirm", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quoteId: quote.quoteId, txHash: cryptoHash }) })
+      .then((response) => { if (response.ok) setCryptoServerConfirmed(true); })
+      .catch(() => undefined);
+  }, [cryptoConfirmed, cryptoHash, quote]);
+
+  useEffect(() => {
+    if (method !== "crypto") return;
+    let cancelled = false;
+    fetch(`/api/payments/crypto/quote?amount=${amount}&currency=${cryptoCurrency}`, { cache: "no-store" })
+      .then(async (response) => {
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "Live crypto pricing is unavailable.");
+        if (!cancelled) setQuote(payload.quote);
+      })
+      .catch((quoteError) => {
+        if (!cancelled) {
+          setQuote(null);
+          setError(quoteError instanceof Error ? quoteError.message : "Live crypto pricing is unavailable.");
+        }
+      })
+      .finally(() => { if (!cancelled) setQuoteLoading(false); });
+    return () => { cancelled = true; };
+  }, [amount, cryptoCurrency, method]);
 
   async function handleBankSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -85,6 +115,10 @@ function CheckoutContent() {
     setError("");
     if (!cryptoConfigured) {
       setError("Crypto checkout needs a valid NEXT_PUBLIC_MERCHANT_WALLET.");
+      return;
+    }
+    if (!quote || Date.parse(quote.expiresAt) <= Date.now()) {
+      setError("This crypto quote expired. Choose the currency again to refresh it.");
       return;
     }
     if (!isConnected || !address) {
@@ -125,7 +159,7 @@ function CheckoutContent() {
   if (bankResult) {
     return <ResultCard type={type} setup={bankResult.mode === "setup_required"} amount={formattedAmount} reference={bankResult.paymentId} message={bankResult.message || "Your bank payment has been created. Your booking is only confirmed after the provider sends a confirmed event."} />;
   }
-  if (cryptoConfirmed && cryptoHash) {
+  if (cryptoServerConfirmed && cryptoHash) {
     return <ResultCard type={type} setup={false} amount={formattedAmount} reference={cryptoHash} crypto message="Your wallet transaction is confirmed on Ethereum. Booking confirmation should be finalized from the transaction receipt and your internal booking record." />;
   }
 
@@ -157,13 +191,14 @@ function CheckoutContent() {
                 {(["USDC", "USDT", "ETH"] as const).map((currency) => (
                   <button key={currency} onClick={() => setCryptoCurrency(currency)} className="rounded-2xl border p-4 text-left" style={{ borderColor: cryptoCurrency === currency ? "var(--kv-primary)" : "var(--kv-border)", background: cryptoCurrency === currency ? "#F4F7FF" : "white" }}>
                     <div className="font-semibold" style={{ color: "var(--kv-text)" }}>{currency}</div>
-                    <div className="mt-1 text-xs" style={{ color: "var(--kv-text-secondary)" }}>{formatCryptoAmount(convertFromUSD(amount, currency), currency)} {currency}</div>
-                    <div className="mt-1 text-xs" style={{ color: "var(--kv-text-tertiary)" }}>1 {currency} = ${exchangeRates[currency].toLocaleString()}</div>
+                    <div className="mt-1 text-xs" style={{ color: "var(--kv-text-secondary)" }}>{currency === cryptoCurrency && quote ? `${formatCryptoAmount(quote.cryptoAmount, currency)} ${currency}` : "Live quote"}</div>
+                    <div className="mt-1 text-xs" style={{ color: "var(--kv-text-tertiary)" }}>{currency === cryptoCurrency && quote ? `$${quote.rate.toLocaleString()} per ${currency}` : "Refresh on selection"}</div>
                   </button>
                 ))}
               </div>
               {isConnected && <p className="mt-4 text-xs" style={{ color: "var(--kv-text-secondary)" }}>Wallet connected: {address?.slice(0, 6)}…{address?.slice(-4)}</p>}
-              <button onClick={payWithCrypto} disabled={cryptoBusy} className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-sm font-semibold text-white disabled:opacity-60" style={{ background: "var(--kv-primary)" }}>{cryptoBusy ? <><Loader2 className="h-4 w-4 animate-spin" /> {confirming ? "Waiting for confirmation…" : "Confirm in wallet…"}</> : cryptoButtonLabel}</button>
+              <div className="mt-4 flex items-center justify-between text-xs" style={{ color: "var(--kv-text-tertiary)" }}><span>{quoteLoading ? "Fetching live rate…" : quote ? `Quote locked until ${new Date(quote.expiresAt).toLocaleTimeString([], { minute: "2-digit", second: "2-digit" })}` : "Quote unavailable"}</span><span>Source: live spot price</span></div>
+              <button onClick={payWithCrypto} disabled={cryptoBusy || quoteLoading || !quote} className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-sm font-semibold text-white disabled:opacity-60" style={{ background: "var(--kv-primary)" }}>{cryptoBusy ? <><Loader2 className="h-4 w-4 animate-spin" /> {confirming ? "Waiting for confirmation…" : "Confirm in wallet…"}</> : cryptoButtonLabel}</button>
               <p className="mt-4 flex items-center justify-center gap-2 text-xs" style={{ color: "var(--kv-text-tertiary)" }}><LockKeyhole className="h-3.5 w-3.5" /> Kevesta never asks for your seed phrase.</p>
             </div>
           )}

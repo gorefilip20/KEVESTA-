@@ -32,7 +32,9 @@ Copy `.env.example` to `.env.local` and configure `COLUMN_API_KEY`, `COLUMN_RECE
 
 The checkout returns a clearly labelled setup state when Column is not configured; this is intentional and safer than a demo payment that looks settled.
 
-Crypto checkout is available beside bank payment for flights, apartments, and other checkout links. It currently supports ETH, USDC, and USDT on Ethereum mainnet through a connected EVM wallet. Configure `NEXT_PUBLIC_MERCHANT_WALLET` with a valid receiving address. A crypto booking is only treated as confirmed after the wallet transaction receives an on-chain receipt; KEVESTA never asks users for seed phrases or private keys. Testnet support should be added before offering a public crypto beta.
+Crypto checkout is available beside bank payment for flights, apartments, and other checkout links. It currently supports ETH, USDC, and USDT on Ethereum mainnet through a connected EVM wallet. Configure `NEXT_PUBLIC_MERCHANT_WALLET` with a valid receiving address. Crypto amounts come from a server-side Coinbase spot quote, signed by `CRYPTO_QUOTE_SECRET`, and expire after `CRYPTO_QUOTE_TTL_SECONDS` (120 seconds by default). The quote is validated again before a crypto payment intent is accepted. A crypto booking is only treated as confirmed after the wallet transaction receives an on-chain receipt; KEVESTA never asks users for seed phrases or private keys. Testnet support should be added before offering a public crypto beta.
+
+Column webhooks must send the official `Column-Signature` header. KEVESTA verifies the raw request body with HMAC-SHA256, requires Column’s stable event ID, and rejects unsigned or malformed events. Duplicate event IDs are acknowledged without being processed twice, and the handler is prepared for Column’s out-of-order delivery model. For production, persist event IDs with a database unique constraint before mutating booking state; the current bounded process cache protects warm instances and is intentionally documented as an interim safeguard.
 
 ## Automated payment testing
 
