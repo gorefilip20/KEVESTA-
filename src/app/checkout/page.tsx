@@ -70,7 +70,7 @@ function CheckoutContent() {
       })
       .catch((intentError) => setError(intentError instanceof Error ? intentError.message : "Booking intent is unavailable."))
       .finally(() => setIntentLoading(false));
-  }, [itemId, type]);
+  }, [itemId, type, searchParams]);
 
   useEffect(() => {
     if (!cryptoConfirmed || !cryptoHash || !quote) return;
