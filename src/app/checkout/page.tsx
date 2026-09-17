@@ -15,14 +15,19 @@ type Method = "bank" | "crypto";
 type CryptoCurrency = "ETH" | "USDC" | "USDT";
 type PaymentResult = { mode: "column" | "setup_required"; status: string; paymentId: string; message?: string };
 type CryptoQuote = { quoteId: string; currency: CryptoCurrency; cryptoAmount: number; rate: number; expiresAt: string };
+type BookingIntent = { id: string; title: string; amount: number; currency: string; expiresAt: string };
 
 function CheckoutContent() {
   const searchParams = useSearchParams();
   const type = searchParams.get("type") || "flight";
+  const itemId = searchParams.get("id") || "";
   const title = searchParams.get("title") || (type === "apartment" ? "Accommodation booking" : "Flight booking");
-  const rawAmount = Number(searchParams.get("amount") || 0);
-  const amount = Number.isFinite(rawAmount) && rawAmount > 0 ? rawAmount : 249;
-  const formattedAmount = useMemo(() => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount), [amount]);
+  const [intent, setIntent] = useState<BookingIntent | null>(null);
+  const [authRequired, setAuthRequired] = useState(false);
+  const [intentLoading, setIntentLoading] = useState(true);
+  const checkoutAmount = intent?.amount || 0;
+  const checkoutTitle = intent?.title || title;
+  const formattedAmount = useMemo(() => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(checkoutAmount), [checkoutAmount]);
 
   const [method, setMethod] = useState<Method>("bank");
   const [name, setName] = useState("");
@@ -56,6 +61,18 @@ function CheckoutContent() {
   const cryptoConfirmed = Boolean(cryptoHash && !confirming && cryptoStatus === "processing");
 
   useEffect(() => {
+    fetch("/api/bookings/intents", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ itemType: type, itemId }) })
+      .then(async (response) => {
+        const payload = await response.json();
+        if (response.status === 401) { setAuthRequired(true); return; }
+        if (!response.ok) throw new Error(payload.error || "Booking intent is unavailable.");
+        setIntent(payload.intent);
+      })
+      .catch((intentError) => setError(intentError instanceof Error ? intentError.message : "Booking intent is unavailable."))
+      .finally(() => setIntentLoading(false));
+  }, [itemId, type]);
+
+  useEffect(() => {
     if (!cryptoConfirmed || !cryptoHash || !quote) return;
     fetch("/api/payments/crypto/confirm", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quoteId: quote.quoteId, txHash: cryptoHash }) })
       .then((response) => { if (response.ok) setCryptoServerConfirmed(true); })
@@ -65,7 +82,7 @@ function CheckoutContent() {
   useEffect(() => {
     if (method !== "crypto") return;
     let cancelled = false;
-    fetch(`/api/payments/crypto/quote?amount=${amount}&currency=${cryptoCurrency}`, { cache: "no-store" })
+    fetch(`/api/payments/crypto/quote?amount=${checkoutAmount}&currency=${cryptoCurrency}`, { cache: "no-store" })
       .then(async (response) => {
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.error || "Live crypto pricing is unavailable.");
@@ -79,7 +96,7 @@ function CheckoutContent() {
       })
       .finally(() => { if (!cancelled) setQuoteLoading(false); });
     return () => { cancelled = true; };
-  }, [amount, cryptoCurrency, method]);
+  }, [checkoutAmount, cryptoCurrency, method]);
 
   async function handleBankSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -89,7 +106,7 @@ function CheckoutContent() {
       const response = await fetch("/api/payments", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() },
-        body: JSON.stringify({ amount, customerName: name, customerEmail: email, description: title }),
+        body: JSON.stringify({ intentId: intent?.id, customerName: name, customerEmail: email }),
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Payment could not be started.");
@@ -156,6 +173,9 @@ function CheckoutContent() {
     );
   }
 
+  if (authRequired) return <AuthRequiredCard />;
+  if (!intentLoading && error && !intent) return <div className="mx-auto max-w-xl px-5 py-16 text-center"><div className="rounded-3xl border bg-white p-8 shadow-sm" style={{ borderColor: "#F0C8C6" }}><h1 className="heritage-heading text-3xl font-semibold" style={{ color: "var(--kv-text)" }}>Secure checkout is unavailable</h1><p className="mt-3 text-sm leading-6 text-red-700">{error}</p></div></div>;
+  if (intentLoading || !intent) return <div className="mx-auto flex min-h-[60vh] max-w-3xl items-center justify-center gap-3 px-5" style={{ color: "var(--kv-text-secondary)" }}><Loader2 className="h-5 w-5 animate-spin" /> Preparing your secure booking…</div>;
   if (bankResult) {
     return <ResultCard type={type} setup={bankResult.mode === "setup_required"} amount={formattedAmount} reference={bankResult.paymentId} message={bankResult.message || "Your bank payment has been created. Your booking is only confirmed after the provider sends a confirmed event."} />;
   }
@@ -204,7 +224,7 @@ function CheckoutContent() {
           )}
           {error && <div className="mt-4 flex gap-2 rounded-xl bg-red-50 p-3 text-sm text-red-700"><CircleAlert className="mt-0.5 h-4 w-4 shrink-0" />{error}</div>}
         </section>
-        <aside className="h-fit rounded-3xl border bg-white p-6 shadow-sm" style={{ borderColor: "var(--kv-border-light)" }}><p className="heritage-caption" style={{ color: "var(--kv-text-tertiary)" }}>Order summary</p><h2 className="mt-3 text-xl font-semibold" style={{ color: "var(--kv-text)" }}>{title}</h2><div className="my-6 border-t pt-5" style={{ borderColor: "var(--kv-border-light)" }}><div className="flex items-center justify-between"><span style={{ color: "var(--kv-text-secondary)" }}>Total</span><span className="text-2xl font-bold" style={{ color: "var(--kv-primary)" }}>{formattedAmount}</span></div></div><div className="space-y-4 text-sm" style={{ color: "var(--kv-text-secondary)" }}><div className="flex gap-3"><ShieldCheck className="h-5 w-5 shrink-0 text-[#1B8A57]" /><span>Bank status is reconciled from signed provider events.</span></div><div className="flex gap-3"><ShieldCheck className="h-5 w-5 shrink-0 text-[#1B8A57]" /><span>Crypto status is based on a confirmed Ethereum receipt.</span></div></div></aside>
+        <aside className="h-fit rounded-3xl border bg-white p-6 shadow-sm" style={{ borderColor: "var(--kv-border-light)" }}><p className="heritage-caption" style={{ color: "var(--kv-text-tertiary)" }}>Order summary</p><h2 className="mt-3 text-xl font-semibold" style={{ color: "var(--kv-text)" }}>{checkoutTitle}</h2><div className="my-6 border-t pt-5" style={{ borderColor: "var(--kv-border-light)" }}><div className="flex items-center justify-between"><span style={{ color: "var(--kv-text-secondary)" }}>Total</span><span className="text-2xl font-bold" style={{ color: "var(--kv-primary)" }}>{formattedAmount}</span></div></div><div className="space-y-4 text-sm" style={{ color: "var(--kv-text-secondary)" }}><div className="flex gap-3"><ShieldCheck className="h-5 w-5 shrink-0 text-[#1B8A57]" /><span>Bank status is reconciled from signed provider events.</span></div><div className="flex gap-3"><ShieldCheck className="h-5 w-5 shrink-0 text-[#1B8A57]" /><span>Crypto status is based on a confirmed Ethereum receipt.</span></div></div></aside>
       </div>
     </div>
   );
@@ -224,4 +244,8 @@ function ResultCard({ type, setup, amount, reference, message, crypto = false }:
 
 export default function CheckoutPage() {
   return <AppShell title="Checkout"><Suspense fallback={<div className="flex min-h-[60vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" style={{ color: "var(--kv-primary)" }} /></div>}><CheckoutContent /></Suspense></AppShell>;
+}
+
+function AuthRequiredCard() {
+  return <div className="mx-auto max-w-xl px-5 py-16 text-center"><div className="rounded-3xl border bg-white p-8 shadow-sm" style={{ borderColor: "var(--kv-border-light)" }}><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: "#EDF3FF", color: "var(--kv-primary)" }}><LockKeyhole className="h-7 w-7" /></div><h1 className="heritage-heading mt-6 text-3xl font-semibold" style={{ color: "var(--kv-text)" }}>Sign in to secure your booking</h1><p className="mt-3 leading-7" style={{ color: "var(--kv-text-secondary)" }}>We create a private booking intent for your account before showing a final price. This prevents tampered totals and keeps your payment tied to you.</p><Link href="/login?returnTo=/checkout" className="mt-7 inline-flex rounded-xl px-5 py-3 text-sm font-semibold text-white" style={{ background: "var(--kv-primary)" }}>Sign in or create account</Link></div></div>;
 }

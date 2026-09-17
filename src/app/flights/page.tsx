@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { parseEther, parseUnits } from "viem";
 import { useAccount, useConnect, useSendTransaction, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 import {
@@ -72,6 +73,7 @@ export default function FlightsPage() {
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [transactionHash, setTransactionHash] = useState<string | null>(null);
 
+  const router = useRouter();
   const web3Ready = isWeb3Configured();
   const { address, isConnected } = useAccount();
   const { connect, connectors, isPending: isConnecting } = useConnect();
@@ -118,6 +120,20 @@ export default function FlightsPage() {
   }
   function startPayment() {
     setPaymentError(null);
+    if (selectedFlight) {
+      const params = new URLSearchParams({
+        type: "flight",
+        id: selectedFlight.id,
+        origin: selectedFlight.origin.code,
+        destination: selectedFlight.destination.code,
+        departDate,
+        cabinClass,
+        passengers: String(passengers),
+        seatPrice: String(selectedSeatData?.price || 0),
+      });
+      router.push(`/checkout?${params.toString()}`);
+      return;
+    }
     if (!web3Ready) {
       setPaymentStatus("processing");
       window.setTimeout(finishBooking, 1200);

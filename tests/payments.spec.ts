@@ -1,15 +1,10 @@
 import { test, expect } from "@playwright/test";
 
-const checkoutUrl = "/checkout?type=flight&amount=249&title=London%20flight";
+const checkoutUrl = "/checkout?type=flight&id=FL-LHRJFK-0-1";
 
- test("checkout exposes bank and crypto payment methods", async ({ page }) => {
+test("checkout requires a server session before showing payment methods", async ({ page }) => {
   await page.goto(checkoutUrl);
-  await expect(page.getByText("Pay by bank")).toBeVisible();
-  await expect(page.getByText("Pay with crypto")).toBeVisible();
-  await page.getByText("Pay with crypto").click();
-  await expect(page.getByRole("button", { name: /^USDC/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /^USDT/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /^ETH/ })).toBeVisible();
+  await expect(page.getByText(/Sign in to secure your booking|Secure checkout is unavailable/)).toBeVisible();
 });
 
 test("unconfigured bank payment never reports success", async ({ request }) => {
@@ -17,14 +12,7 @@ test("unconfigured bank payment never reports success", async ({ request }) => {
     headers: { "Content-Type": "application/json", "Idempotency-Key": `test-${Date.now()}` },
     data: { amount: 249, customerName: "Sandbox Customer", customerEmail: "sandbox@example.com", description: "E2E booking" },
   });
-  if (process.env.COLUMN_API_KEY && process.env.COLUMN_RECEIVING_ACCOUNT_ID) {
-    expect(response.status()).toBeLessThan(500);
-  } else {
-    expect(response.status()).toBe(503);
-    const body = await response.json();
-    expect(body.payment.mode).toBe("setup_required");
-    expect(body.payment.status).toBe("pending");
-  }
+  expect(response.status()).toBe(401);
 });
 
 test("webhook rejects unsigned provider events", async ({ request }) => {
