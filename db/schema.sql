@@ -47,3 +47,47 @@ create table if not exists booking_intents (
 );
 create index if not exists booking_intents_user_id_idx on booking_intents(user_id);
 create index if not exists booking_intents_expires_at_idx on booking_intents(expires_at);
+
+create table if not exists bookings (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id) on delete restrict,
+  intent_id uuid not null unique references booking_intents(id) on delete restrict,
+  item_type text not null check (item_type in ('flight', 'apartment', 'service')),
+  item_id text not null,
+  item_title text not null,
+  amount_cents integer not null check (amount_cents > 0),
+  currency text not null default 'USD',
+  status text not null default 'intent_created' check (status in ('intent_created', 'payment_pending', 'paid', 'failed', 'cancelled', 'refunded', 'expired')),
+  status_rank integer not null default 10,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists bookings_user_id_idx on bookings(user_id);
+create index if not exists bookings_status_idx on bookings(status);
+
+create table if not exists payments (
+  id uuid primary key default gen_random_uuid(),
+  booking_id uuid not null references bookings(id) on delete restrict,
+  provider text not null check (provider in ('column', 'crypto')),
+  provider_payment_id text not null unique,
+  idempotency_key text unique,
+  amount_cents integer not null check (amount_cents > 0),
+  currency text not null,
+  status text not null default 'pending' check (status in ('pending', 'processing', 'paid', 'failed', 'refunded')),
+  status_rank integer not null default 10,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists payments_booking_id_idx on payments(booking_id);
+
+create table if not exists provider_events (
+  id uuid primary key default gen_random_uuid(),
+  provider text not null,
+  event_id text not null,
+  event_type text not null,
+  payload jsonb not null,
+  received_at timestamptz not null default now(),
+  processed_at timestamptz,
+  unique (provider, event_id)
+);

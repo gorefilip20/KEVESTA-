@@ -19,24 +19,6 @@ export function verifyColumnSignature(rawBody: string, signature: string | null)
   return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(received));
 }
 
-const processedEvents = new Map<string, number>();
-const EVENT_TTL_MS = 72 * 60 * 60 * 1000;
-
-/**
- * Column retries the same event ID. This cache prevents duplicate processing
- * inside a warm process; the production backing store should also persist the
- * event ID with a unique constraint before mutating a booking.
- */
-export function claimWebhookEvent(eventId: string) {
-  const now = Date.now();
-  for (const [id, seenAt] of processedEvents) {
-    if (now - seenAt > EVENT_TTL_MS) processedEvents.delete(id);
-  }
-  if (processedEvents.has(eventId)) return false;
-  processedEvents.set(eventId, now);
-  return true;
-}
-
 export async function createColumnPayment(input: {
   amount: number;
   currency: string;
