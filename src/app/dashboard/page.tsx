@@ -81,6 +81,8 @@ export default function DashboardPage() {
   const [bookingsLoading, setBookingsLoading] = useState(true);
   const [bookingsError, setBookingsError] = useState("");
   const [cancelling, setCancelling] = useState<string | null>(null);
+  const [preferences, setPreferences] = useState({ phone_e164: "", sms_enabled: false, push_enabled: false, booking_updates: true, refund_updates: true });
+  const [preferenceStatus, setPreferenceStatus] = useState("");
 
   async function cancelBooking(booking: Booking) {
     const prompt = booking.status === "paid" ? "Request a refund for this booking? The booking will remain refund-pending until the provider confirms it." : "Cancel this booking?";
@@ -105,7 +107,15 @@ export default function DashboardPage() {
       })
       .catch((error) => setBookingsError(error instanceof Error ? error.message : "Trips are unavailable."))
       .finally(() => setBookingsLoading(false));
+    fetch("/api/notifications/preferences").then((response) => response.json()).then((payload) => { if (payload.preferences) setPreferences({ phone_e164: payload.preferences.phone_e164 || "", sms_enabled: payload.preferences.sms_enabled, push_enabled: payload.preferences.push_enabled, booking_updates: payload.preferences.booking_updates, refund_updates: payload.preferences.refund_updates }); }).catch(() => undefined);
   }, []);
+
+  async function savePreferences() {
+    setPreferenceStatus("Saving…");
+    const response = await fetch("/api/notifications/preferences", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(preferences) });
+    const payload = await response.json();
+    setPreferenceStatus(response.ok ? "Preferences saved" : payload.error || "Could not save preferences");
+  }
 
   return (
     <AppShell title="Overview">
@@ -267,6 +277,11 @@ export default function DashboardPage() {
               })}
             </div>
           </div>
+        </div>
+
+        <div className="rounded-xl border p-5" style={{ background: "var(--kv-surface)", borderColor: "var(--kv-border)" }}>
+          <div className="flex flex-wrap items-start justify-between gap-4"><div><h3 className="heritage-heading font-semibold" style={{ color: "var(--kv-text)" }}>Stay in the loop</h3><p className="mt-1 text-sm" style={{ color: "var(--kv-text-secondary)" }}>Choose how KEVESTA updates you about bookings and refunds. Nothing is sent without your opt-in.</p></div><button onClick={savePreferences} className="rounded-xl px-4 py-2 text-sm font-semibold text-white" style={{ background: "var(--kv-primary)" }}>Save preferences</button></div>
+          <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-4"><label className="text-sm" style={{ color: "var(--kv-text-secondary)" }}>SMS number<input value={preferences.phone_e164} onChange={(event) => setPreferences({ ...preferences, phone_e164: event.target.value })} placeholder="+14155552671" className="mt-1 w-full rounded-lg border px-3 py-2" style={{ background: "var(--kv-bg)", borderColor: "var(--kv-border)", color: "var(--kv-text)" }} /></label><label className="flex items-center gap-2 text-sm" style={{ color: "var(--kv-text)" }}><input type="checkbox" checked={preferences.sms_enabled} onChange={(event) => setPreferences({ ...preferences, sms_enabled: event.target.checked })} /> SMS notifications</label><label className="flex items-center gap-2 text-sm" style={{ color: "var(--kv-text)" }}><input type="checkbox" checked={preferences.push_enabled} onChange={(event) => setPreferences({ ...preferences, push_enabled: event.target.checked })} /> Push notifications</label><div className="space-y-2 text-sm" style={{ color: "var(--kv-text)" }}><label className="flex items-center gap-2"><input type="checkbox" checked={preferences.booking_updates} onChange={(event) => setPreferences({ ...preferences, booking_updates: event.target.checked })} /> Booking updates</label><label className="flex items-center gap-2"><input type="checkbox" checked={preferences.refund_updates} onChange={(event) => setPreferences({ ...preferences, refund_updates: event.target.checked })} /> Refund updates</label></div></div>{preferenceStatus && <p className="mt-3 text-xs" style={{ color: "var(--kv-text-secondary)" }}>{preferenceStatus}</p>}
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">

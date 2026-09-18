@@ -121,3 +121,39 @@ create table if not exists financial_receipts (
   issued_at timestamptz not null default now(),
   unique (booking_id, receipt_type)
 );
+
+create table if not exists notification_preferences (
+  user_id uuid primary key references users(id) on delete cascade,
+  phone_e164 text,
+  sms_enabled boolean not null default false,
+  push_enabled boolean not null default false,
+  booking_updates boolean not null default true,
+  refund_updates boolean not null default true,
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists push_devices (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id) on delete cascade,
+  token text not null unique,
+  platform text not null check (platform in ('ios', 'android', 'web')),
+  enabled boolean not null default true,
+  created_at timestamptz not null default now(),
+  last_seen_at timestamptz not null default now()
+);
+create index if not exists push_devices_user_idx on push_devices(user_id, enabled);
+
+create table if not exists notification_deliveries (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id) on delete cascade,
+  booking_id uuid references bookings(id) on delete set null,
+  channel text not null check (channel in ('sms', 'push')),
+  event_type text not null,
+  destination text not null,
+  status text not null check (status in ('sent', 'skipped', 'failed')),
+  provider_message_id text,
+  error text,
+  idempotency_key text not null unique,
+  created_at timestamptz not null default now()
+);
+create index if not exists notification_deliveries_user_idx on notification_deliveries(user_id, created_at desc);

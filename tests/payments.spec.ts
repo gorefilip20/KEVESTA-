@@ -42,6 +42,12 @@ test("booking cancellation rejects unauthenticated access", async ({ request }) 
   expect(response.status()).toBe(401);
 });
 
+test("notification preference and device APIs reject unauthenticated access", async ({ request }) => {
+  expect((await request.get("/api/notifications/preferences")).status()).toBe(401);
+  expect((await request.patch("/api/notifications/preferences", { data: { sms_enabled: true } })).status()).toBe(401);
+  expect((await request.post("/api/notifications/devices", { data: { token: "a-valid-looking-device-token-123456", platform: "web" } })).status()).toBe(401);
+});
+
 test("Column sandbox payment initiation works when sandbox credentials are configured", async ({ request }) => {
   test.skip(!process.env.COLUMN_API_KEY || !process.env.COLUMN_RECEIVING_ACCOUNT_ID || !process.env.COLUMN_WEBHOOK_SECRET || !process.env.E2E_SESSION_COOKIE || !process.env.E2E_BOOKING_INTENT_ID, "Set sandbox credentials, an authenticated test cookie, and a fresh booking intent");
   const response = await request.post("/api/payments", {

@@ -2,9 +2,11 @@ import crypto from "node:crypto";
 import type { PoolClient } from "pg";
 import { withTransaction } from "@/lib/server/db";
 import { sendRefundCompletedEmail } from "@/lib/server/email";
+import { notifyBookingEvent } from "@/lib/server/notifications";
+import { query } from "@/lib/server/db";
 
 type ColumnEvent = { id: string; type?: string; created_at?: string; data?: { id?: string; status?: string; transfer_id?: string; refund_id?: string; [key: string]: unknown } };
-type RefundNotification = { email: string; name: string; title: string; amount: string; receiptNumber: string; providerReference: string };
+type RefundNotification = { userId: string; bookingId: string; email: string; name: string; title: string; amount: string; receiptNumber: string; providerReference: string };
 type ReconciliationResult = { duplicate: boolean; matched: boolean; status?: string; refundNotification?: RefundNotification };
 
 const statusFor = (event: ColumnEvent) => {
@@ -39,14 +41,14 @@ export async function reconcileColumnEvent(event: ColumnEvent): Promise<Reconcil
     }
     let refundNotification: RefundNotification | undefined;
     if (mapped.refund) {
-      const details = await client.query<{ email: string; name: string; item_title: string; amount_cents: number; currency: string; refund_request_id: string | null; receipt_number: string | null }>("select u.email, u.name, b.item_title, b.amount_cents, b.currency, rr.id as refund_request_id, fr.receipt_number from bookings b join users u on u.id = b.user_id left join refund_requests rr on rr.booking_id = b.id left join financial_receipts fr on fr.booking_id = b.id and fr.receipt_type = 'refund_completed' where b.id = $1", [payment.booking_id]);
+      const details = await client.query<{ user_id: string; email: string; name: string; item_title: string; amount_cents: number; currency: string; refund_request_id: string | null; receipt_number: string | null }>("select b.user_id, u.email, u.name, b.item_title, b.amount_cents, b.currency, rr.id as refund_request_id, fr.receipt_number from bookings b join users u on u.id = b.user_id left join refund_requests rr on rr.booking_id = b.id left join financial_receipts fr on fr.booking_id = b.id and fr.receipt_type = 'refund_completed' where b.id = $1", [payment.booking_id]);
       const booking = details.rows[0];
       const providerReference = event.data?.refund_id || event.data?.id || providerPaymentId;
       if (booking) {
         await client.query("update refund_requests set status = 'succeeded', provider_refund_id = coalesce(provider_refund_id, $1), updated_at = now() where booking_id = $2", [providerReference, payment.booking_id]);
         const receiptNumber = booking.receipt_number || `RF-${Date.now().toString(36).toUpperCase()}`;
         const receipt = await client.query<{ receipt_number: string }>("insert into financial_receipts (id, booking_id, payment_id, refund_request_id, receipt_type, receipt_number, amount_cents, currency, provider_reference) values ($1, $2, $3, (select id from refund_requests where booking_id = $2), 'refund_completed', $4, $5, $6, $7) on conflict (booking_id, receipt_type) do update set receipt_number = financial_receipts.receipt_number returning receipt_number", [crypto.randomUUID(), payment.booking_id, payment.id, receiptNumber, booking.amount_cents, booking.currency, providerReference]);
-        refundNotification = { email: booking.email, name: booking.name, title: booking.item_title, amount: new Intl.NumberFormat("en-US", { style: "currency", currency: booking.currency }).format(booking.amount_cents / 100), receiptNumber: receipt.rows[0]?.receipt_number || receiptNumber, providerReference };
+        refundNotification = { userId: booking.user_id, bookingId: payment.booking_id, email: booking.email, name: booking.name, title: booking.item_title, amount: new Intl.NumberFormat("en-US", { style: "currency", currency: booking.currency }).format(booking.amount_cents / 100), receiptNumber: receipt.rows[0]?.receipt_number || receiptNumber, providerReference };
       }
     }
     if (mapped.rank >= payment.status_rank) {
@@ -60,6 +62,12 @@ export async function reconcileColumnEvent(event: ColumnEvent): Promise<Reconcil
   if (result.refundNotification) {
     const notification = result.refundNotification;
     await sendRefundCompletedEmail(notification.email, notification.name, notification.title, notification.amount, notification.receiptNumber, notification.providerReference).catch((error) => console.error("Refund completion email failed", error));
+    await notifyBookingEvent({ userId: notification.userId, bookingId: notification.bookingId, eventType: "refund_completed", title: "Refund complete", body: `${notification.title} · ${notification.amount} has been confirmed by the provider.` }).catch((error) => console.error("Refund completion notification failed", error));
+  }
+  if (result.matched && (result.status === "paid" || result.status === "failed") && event.data?.id) {
+    const details = await query<{ user_id: string; booking_id: string; item_title: string; amount_cents: number; currency: string }>("select b.user_id, b.id as booking_id, b.item_title, b.amount_cents, b.currency from payments p join bookings b on b.id = p.booking_id where p.provider = 'column' and p.provider_payment_id = $1", [event.data.id]);
+    const booking = details.rows[0];
+    if (booking) await notifyBookingEvent({ userId: booking.user_id, bookingId: booking.booking_id, eventType: result.status === "paid" ? "booking_paid" : "booking_failed", title: result.status === "paid" ? "Booking confirmed" : "Payment needs attention", body: `${booking.item_title} · ${new Intl.NumberFormat("en-US", { style: "currency", currency: booking.currency }).format(booking.amount_cents / 100)}.` }).catch((error) => console.error("Booking status notification failed", error));
   }
   return result;
 }

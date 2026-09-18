@@ -32,6 +32,10 @@ Users can cancel unpaid bookings from the dashboard. Paid Column bookings can re
 
 Refund requests now create durable `financial_receipts` records and send a branded notification containing the receipt reference. When a verified Column refund-completed event arrives, KEVESTA creates a completion receipt, updates the refund request to `succeeded`, and sends a second branded email with the provider reference. Email delivery failures are logged without rolling back the financial state transition; the receipt and status remain authoritative for retry tooling.
 
+## SMS and push notifications
+
+Booking and refund status changes can also be delivered through opt-in SMS and push notifications. Users manage their phone number, SMS consent, push consent, and event categories from the dashboard. SMS uses Twilio with `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM_NUMBER`. Push uses Firebase Cloud Messaging HTTP v1 with `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, and `FIREBASE_PRIVATE_KEY`; client applications register device tokens through `/api/notifications/devices`. Credentials remain server-only. Each attempt is recorded in `notification_deliveries` with an idempotency key, provider reference, and delivery status. If a provider is not configured, the application records a skipped delivery and never blocks booking or refund state transitions.
+
 ## Payments
 
 Checkout uses a server-side Column adapter for bank payments. The browser never receives the Column API key and KEVESTA never treats a client-side response as proof of settlement. A booking remains pending until a signed provider event is received at:
