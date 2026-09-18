@@ -36,6 +36,10 @@ Refund requests now create durable `financial_receipts` records and send a brand
 
 Booking and refund status changes can also be delivered through opt-in SMS and push notifications. Users manage their phone number, SMS consent, push consent, and event categories from the dashboard. SMS uses Twilio with `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM_NUMBER`. Push uses Firebase Cloud Messaging HTTP v1 with `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, and `FIREBASE_PRIVATE_KEY`; client applications register device tokens through `/api/notifications/devices`. Credentials remain server-only. Each attempt is recorded in `notification_deliveries` with an idempotency key, provider reference, and delivery status. If a provider is not configured, the application records a skipped delivery and never blocks booking or refund state transitions.
 
+## Calendar syncing
+
+Users can connect Google Calendar or Outlook from the dashboard. OAuth state is signed, access and refresh tokens are encrypted at rest with `CALENDAR_TOKEN_SECRET`, and a confirmed booking creates at most one event per provider through `calendar_sync_events`. Google uses the Calendar Events API; Outlook uses Microsoft Graph. If OAuth credentials are not configured, a confirmed booking can still be downloaded as a private `.ics` file from My Trips. Register these callback URLs with each provider: `/api/calendar/google/callback` and `/api/calendar/outlook/callback` under the configured `NEXT_PUBLIC_APP_URL`.
+
 ## Payments
 
 Checkout uses a server-side Column adapter for bank payments. The browser never receives the Column API key and KEVESTA never treats a client-side response as proof of settlement. A booking remains pending until a signed provider event is received at:

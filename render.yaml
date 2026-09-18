@@ -64,3 +64,13 @@ services:
         sync: false
       - key: FIREBASE_PRIVATE_KEY
         sync: false
+      - key: CALENDAR_TOKEN_SECRET
+        sync: false
+      - key: GOOGLE_CALENDAR_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CALENDAR_CLIENT_SECRET
+        sync: false
+      - key: MICROSOFT_CALENDAR_CLIENT_ID
+        sync: false
+      - key: MICROSOFT_CALENDAR_CLIENT_SECRET
+        sync: false

@@ -4,6 +4,7 @@ import { withTransaction } from "@/lib/server/db";
 import { sendRefundCompletedEmail } from "@/lib/server/email";
 import { notifyBookingEvent } from "@/lib/server/notifications";
 import { query } from "@/lib/server/db";
+import { syncConfirmedBooking } from "@/lib/server/calendar";
 
 type ColumnEvent = { id: string; type?: string; created_at?: string; data?: { id?: string; status?: string; transfer_id?: string; refund_id?: string; [key: string]: unknown } };
 type RefundNotification = { userId: string; bookingId: string; email: string; name: string; title: string; amount: string; receiptNumber: string; providerReference: string };
@@ -68,6 +69,7 @@ export async function reconcileColumnEvent(event: ColumnEvent): Promise<Reconcil
     const details = await query<{ user_id: string; booking_id: string; item_title: string; amount_cents: number; currency: string }>("select b.user_id, b.id as booking_id, b.item_title, b.amount_cents, b.currency from payments p join bookings b on b.id = p.booking_id where p.provider = 'column' and p.provider_payment_id = $1", [event.data.id]);
     const booking = details.rows[0];
     if (booking) await notifyBookingEvent({ userId: booking.user_id, bookingId: booking.booking_id, eventType: result.status === "paid" ? "booking_paid" : "booking_failed", title: result.status === "paid" ? "Booking confirmed" : "Payment needs attention", body: `${booking.item_title} · ${new Intl.NumberFormat("en-US", { style: "currency", currency: booking.currency }).format(booking.amount_cents / 100)}.` }).catch((error) => console.error("Booking status notification failed", error));
+    if (booking && result.status === "paid") await syncConfirmedBooking(booking.user_id, booking.booking_id).catch((error) => console.error("Calendar sync failed", error));
   }
   return result;
 }

@@ -157,3 +157,28 @@ create table if not exists notification_deliveries (
   created_at timestamptz not null default now()
 );
 create index if not exists notification_deliveries_user_idx on notification_deliveries(user_id, created_at desc);
+
+create table if not exists calendar_connections (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id) on delete cascade,
+  provider text not null check (provider in ('google', 'outlook')),
+  access_token_encrypted text not null,
+  refresh_token_encrypted text,
+  expires_at timestamptz,
+  calendar_id text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, provider)
+);
+
+create table if not exists calendar_sync_events (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id) on delete cascade,
+  booking_id uuid not null references bookings(id) on delete cascade,
+  provider text not null check (provider in ('google', 'outlook', 'ics')),
+  external_event_id text,
+  status text not null check (status in ('synced', 'failed')),
+  error text,
+  synced_at timestamptz not null default now(),
+  unique (booking_id, provider)
+);
