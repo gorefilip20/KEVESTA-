@@ -5,7 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/constants/theme";
 import { api, type Apartment } from "@/lib/api";
 
-const actions = [{ icon: "airplane-outline", label: "Find a flight", route: "/explore" }, { icon: "home-outline", label: "Find a stay", route: "/explore" }, { icon: "sparkles-outline", label: "Ask KEVESTA", route: "/assistant" }, { icon: "book-outline", label: "Arrival guide", route: "/explore" }] as const;
+const actions = [{ icon: "airplane-outline", label: "Find a flight", route: "/flights" }, { icon: "home-outline", label: "Find a stay", route: "/explore" }, { icon: "sparkles-outline", label: "Ask KEVESTA", route: "/assistant" }, { icon: "book-outline", label: "Arrival guide", route: "/explore" }] as const;
 export default function HomeScreen() {
   const router = useRouter(); const [stays, setStays] = useState<Apartment[]>([]);
   useEffect(() => { api.getFeaturedStays().then((data) => setStays(data.apartments || [])).catch(() => setStays([])); }, []);

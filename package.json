@@ -11,7 +11,10 @@
     "mobile:check": "npm --prefix mobile run check",
     "test:e2e": "playwright test",
     "test:email": "tsx scripts/test-email-delivery.ts",
-    "test:integration:local": "start-server-and-test \"tsx scripts/local-stack.ts\" http://127.0.0.1:3001 \"LOCAL_INTEGRATION=1 playwright test tests/payments.spec.ts --project=chromium\""
+    "test:integration:local": "start-server-and-test \"tsx scripts/local-stack.ts\" http://127.0.0.1:3001 \"LOCAL_INTEGRATION=1 playwright test tests/payments.spec.ts --project=chromium\"",
+    "mobile:e2e": "wdio run e2e/wdio.conf.cjs",
+    "mobile:e2e:android": "MOBILE_PLATFORM=Android npm run mobile:e2e",
+    "mobile:e2e:ios": "MOBILE_PLATFORM=iOS npm run mobile:e2e"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.102.8",
@@ -36,6 +39,12 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/smtp-server": "^3.5.13",
+    "@wdio/appium-service": "^9.32.0",
+    "@wdio/cli": "^9.32.0",
+    "@wdio/local-runner": "^9.32.0",
+    "@wdio/mocha-framework": "^9.32.0",
+    "@wdio/spec-reporter": "^9.32.0",
+    "appium": "^3.7.0",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
     "mailparser": "^3.9.28",
@@ -44,6 +53,7 @@
     "start-server-and-test": "^3.0.12",
     "tailwindcss": "^4",
     "tsx": "^4.23.13",
-    "typescript": "^5"
+    "typescript": "^5",
+    "webdriverio": "^9.32.0"
   }
 }
