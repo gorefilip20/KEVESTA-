@@ -28,7 +28,7 @@ export const api = {
   getUser: () => request<{ user: User }>("/api/auth/me", undefined, true),
   getTravel: (country?: string) => request<{ countries: Country[]; categories: GuidanceCategory[]; country?: Country }>(`/api/travel${country ? `?country=${country}` : ""}`),
   getFeaturedStays: () => request<{ apartments: Apartment[] }>("/api/apartments?action=featured"),
-  getFlights: (origin: string, destination: string) => request<{ flights: Flight[] }>(`/api/flights?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&departDate=${new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10)}&passengers=1&cabinClass=economy`),
+  getFlights: (origin: string, destination: string, departDate?: string, passengers = 1, cabinClass = "economy") => request<{ flights: Flight[] }>(`/api/flights?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&departDate=${encodeURIComponent(departDate || new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10))}&passengers=${passengers}&cabinClass=${encodeURIComponent(cabinClass)}`),
   chat: (message: string, country: string, conversationHistory: { role: string; content: string }[] = []) => request<{ response: string }>("/api/chat", { method: "POST", body: JSON.stringify({ message, country, type: "travel", conversationHistory }) }),
   getBookings: () => request<{ bookings: Booking[] }>("/api/bookings", undefined, true),
   createIntent: (body: { itemType: "apartment" | "flight"; itemId: string; origin?: string; destination?: string; departDate?: string; cabinClass?: string; passengers?: number; seatPrice?: number }) => request<{ intent: BookingIntent }>("/api/bookings/intents", { method: "POST", body: JSON.stringify(body) }, true),
