@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { getRequestUser } from "@/lib/server/request-auth";
 import { query, withTransaction } from "@/lib/server/db";
+import { generateItineraryPlan } from "@/lib/ai-engine";
 
 export async function GET(request: NextRequest) {
   const user = await getRequestUser(request); if (!user) return NextResponse.json({ error: "Authentication required" }, { status: 401 });
@@ -35,17 +36,24 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ member: result.rows[0], inviteUrl: `/trip/invite/${inviteToken}` }, { status: 201 });
     }
     if (action === "stop") { const result = await query("insert into trip_stops (trip_id,title,description,location,start_at,end_at,category,created_by) values ($1,$2,$3,$4,$5,$6,$7,$8) returning *", [tripId, body.title, body.description || null, body.location || null, body.startAt || null, body.endAt || null, body.category || "place", user.id]); return NextResponse.json({ stop: result.rows[0] }, { status: 201 }); }
-    if (action === "document") { const result = await query("insert into trip_documents (trip_id,title,document_type,file_url,reference,expires_at,created_by) values ($1,$2,$3,$4,$5,$6,$7) returning *", [tripId, body.title, body.documentType || "other", body.fileUrl || null, body.reference || null, body.expiresAt || null, user.id]); return NextResponse.json({ document: result.rows[0] }, { status: 201 }); }
-    if (action === "expense") { const result = await query("insert into trip_expenses (trip_id,description,amount_cents,currency,paid_by,split_type) values ($1,$2,$3,$4,$5,$6) returning *", [tripId, body.description, Math.round(Number(body.amount || 0) * 100), body.currency || "USD", user.id, body.splitType || "equal"]); return NextResponse.json({ expense: result.rows[0] }, { status: 201 }); }
+    if (action === "document") {
+      const title = String(body.title || "").trim().slice(0, 160); const fileUrl = body.fileUrl ? String(body.fileUrl).slice(0, 2_000_000) : null;
+      if (!title || (!fileUrl && !body.reference)) return NextResponse.json({ error: "Document title and a file or reference are required" }, { status: 400 });
+      const result = await query("insert into trip_documents (trip_id,title,document_type,file_url,reference,expires_at,created_by) values ($1,$2,$3,$4,$5,$6,$7) returning *", [tripId, title, body.documentType || "other", fileUrl, body.reference || null, body.expiresAt || null, user.id]); return NextResponse.json({ document: result.rows[0] }, { status: 201 });
+    }
+    if (action === "expense") {
+      const description = String(body.description || "").trim().slice(0, 160); const amount = Number(body.amount); if (!description || !Number.isFinite(amount) || amount <= 0) return NextResponse.json({ error: "Expense description and a positive amount are required" }, { status: 400 });
+      const result = await query("insert into trip_expenses (trip_id,description,amount_cents,currency,paid_by,split_type) values ($1,$2,$3,$4,$5,$6) returning *", [tripId, description, Math.round(amount * 100), body.currency || "USD", user.id, body.splitType || "equal"]); return NextResponse.json({ expense: result.rows[0] }, { status: 201 });
+    }
     if (action === "note") { const result = await query("insert into trip_notes (trip_id,title,body,created_by) values ($1,$2,$3,$4) returning *", [tripId, body.title, body.body, user.id]); return NextResponse.json({ note: result.rows[0] }, { status: 201 }); }
     if (action === "link") { const result = await query("insert into trip_links (trip_id,title,url,created_by) values ($1,$2,$3,$4) returning *", [tripId, body.title, body.url, user.id]); return NextResponse.json({ link: result.rows[0] }, { status: 201 }); }
     if (action === "photo") { const result = await query("insert into trip_photos (trip_id,url,caption,created_by) values ($1,$2,$3,$4) returning *", [tripId, body.url, body.caption || null, user.id]); return NextResponse.json({ photo: result.rows[0] }, { status: 201 }); }
     if (action === "plan") {
       const prompt = String(body.prompt || "").slice(0, 1200); if (!prompt) return NextResponse.json({ error: "Planning prompt is required" }, { status: 400 });
-      const items = prompt.split(/\n|,|;| then /i).map((item: string) => item.trim()).filter(Boolean).slice(0, 8);
+      const plan = await generateItineraryPlan(prompt, String(body.countryCode || "US").slice(0, 5));
       const created = [];
-      for (let index = 0; index < items.length; index += 1) { const result = await query("insert into trip_stops (trip_id,title,description,category,position,created_by) values ($1,$2,$3,'ai_suggestion',$4,$5) returning *", [tripId, items[index], "Suggested by KEVESTA AI planning", index, user.id]); created.push(result.rows[0]); }
-      return NextResponse.json({ stops: created, message: "Your planning ideas are now itinerary stops." }, { status: 201 });
+      for (let index = 0; index < plan.stops.length; index += 1) { const stop = plan.stops[index]; const result = await query("insert into trip_stops (trip_id,title,description,location,category,position,created_by) values ($1,$2,$3,$4,$5,$6,$7) returning *", [tripId, stop.title, `${stop.description} ${stop.timeOfDay} · AI context: ${plan.travelContext.slice(0, 180)}`, stop.location, stop.category, index, user.id]); created.push(result.rows[0]); }
+      return NextResponse.json({ stops: created, travelContext: plan.travelContext, message: "KEVESTA AI turned your ideas into an editable itinerary." }, { status: 201 });
     }
     return NextResponse.json({ error: "Unsupported trip action" }, { status: 400 });
   } catch { return NextResponse.json({ error: "Trip update could not be saved" }, { status: 503 }); }
