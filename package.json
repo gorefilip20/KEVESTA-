@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "mobile:install": "npm --prefix mobile install",
+    "mobile:check": "npm --prefix mobile run check",
     "test:e2e": "playwright test",
     "test:email": "tsx scripts/test-email-delivery.ts",
     "test:integration:local": "start-server-and-test \"tsx scripts/local-stack.ts\" http://127.0.0.1:3001 \"LOCAL_INTEGRATION=1 playwright test tests/payments.spec.ts --project=chromium\""

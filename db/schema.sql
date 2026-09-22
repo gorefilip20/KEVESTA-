@@ -32,6 +32,18 @@ create table if not exists sessions (
 create index if not exists sessions_user_id_idx on sessions(user_id);
 create index if not exists sessions_expires_at_idx on sessions(expires_at);
 
+create table if not exists mobile_sessions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id) on delete cascade,
+  token_hash text not null unique,
+  expires_at timestamptz not null,
+  revoked_at timestamptz,
+  last_used_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create index if not exists mobile_sessions_user_id_idx on mobile_sessions(user_id);
+create index if not exists mobile_sessions_active_idx on mobile_sessions(token_hash, expires_at) where revoked_at is null;
+
 create table if not exists booking_intents (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references users(id) on delete restrict,
