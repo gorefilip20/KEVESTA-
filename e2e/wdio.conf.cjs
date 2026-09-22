@@ -1,0 +1,32 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
+const path = require("node:path");
+exports.config = {
+  runner: "local",
+  specs: [path.join(__dirname, "specs/**/*.e2e.js")],
+  maxInstances: 1,
+  logLevel: process.env.WDIO_LOG_LEVEL || "info",
+  bail: 0,
+  baseUrl: process.env.MOBILE_BASE_URL || "http://127.0.0.1:8081",
+  waitforTimeout: 15000,
+  connectionRetryTimeout: 120000,
+  connectionRetryCount: 2,
+  framework: "mocha",
+  reporters: ["spec"],
+  services: process.env.APPIUM_EXTERNAL === "1" ? [] : [["appium", { args: { address: "127.0.0.1", port: 4723, relaxedSecurity: true } }]],
+  hostname: process.env.APPIUM_HOST || "127.0.0.1",
+  port: Number(process.env.APPIUM_PORT || 4723),
+  path: "/",
+  capabilities: [{
+    platformName: process.env.MOBILE_PLATFORM || "Android",
+    "appium:automationName": process.env.MOBILE_AUTOMATION || (process.env.MOBILE_PLATFORM === "iOS" ? "XCUITest" : "UiAutomator2"),
+    "appium:deviceName": process.env.MOBILE_DEVICE || (process.env.MOBILE_PLATFORM === "iOS" ? "iPhone 15" : "Android Emulator"),
+    "appium:platformVersion": process.env.MOBILE_PLATFORM_VERSION,
+    "appium:app": process.env.MOBILE_APP_PATH,
+    "appium:appPackage": process.env.MOBILE_APP_PACKAGE || "host.exp.exponent",
+    "appium:appActivity": process.env.MOBILE_APP_ACTIVITY || ".experience.HomeActivity",
+    "appium:autoGrantPermissions": true,
+    "appium:newCommandTimeout": 180,
+    "appium:noReset": false,
+  }],
+  mochaOpts: { ui: "bdd", timeout: 120000 },
+};
