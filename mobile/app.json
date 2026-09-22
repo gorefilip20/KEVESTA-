@@ -7,9 +7,23 @@
     "scheme": "kevesta",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "ios": { "supportsTablet": true, "bundleIdentifier": "com.kevesta.app" },
-    "android": { "package": "com.kevesta.app", "edgeToEdgeEnabled": true },
-    "web": { "bundler": "metro", "output": "static" },
-    "experiments": { "typedRoutes": true }
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.kevesta.app"
+    },
+    "android": {
+      "package": "com.kevesta.app",
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "experiments": {
+      "typedRoutes": true
+    },
+    "plugins": [
+      "expo-font"
+    ]
   }
 }
