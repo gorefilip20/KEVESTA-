@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser, sameOrigin } from "@/lib/server/auth";
+import { sameOrigin } from "@/lib/server/auth";
+import { getRequestUser } from "@/lib/server/request-auth";
 import { query } from "@/lib/server/db";
 import { getApartmentById } from "@/data/apartments";
 import { searchFlights } from "@/data/flights";
 
 export async function POST(request: NextRequest) {
   if (!sameOrigin(request)) return NextResponse.json({ error: "Invalid request origin" }, { status: 403 });
-  const user = await getCurrentUser();
+  const user = await getRequestUser(request);
   if (!user) return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   try {
     const body = await request.json();

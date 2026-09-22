@@ -1,0 +1,1 @@
+export const colors = { bg: "#F7F4EF", surface: "#FFFFFF", ink: "#211D1A", muted: "#766E67", border: "#E7E0D8", purple: "#4A356E", purpleSoft: "#EDE7F6", terracotta: "#B85C43", green: "#2F7D64", gold: "#C89539" } as const;
