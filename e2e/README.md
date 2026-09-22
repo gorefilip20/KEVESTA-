@@ -38,3 +38,17 @@ The authenticated test is skipped when `E2E_EMAIL` and `E2E_PASSWORD` are absent
 The app’s `testID` values are deliberately stable and should be kept unchanged when updating the UI: `login-email`, `login-password`, `login-submit`, `login-error`, `flight-origin`, `flight-destination`, `flight-search-submit`, `passenger-first-name`, `passenger-last-name`, `passenger-email`, and `passenger-next`.
 
 A sandbox without a connected device can still validate TypeScript, the production web build, the Expo web renderer, and test configuration loading, but it cannot claim a native Appium pass or real payment settlement.
+
+## Remote Android emulator workflow
+
+GitHub Actions workflow `.github/workflows/mobile-android-e2e.yml` builds a debug Android APK, provisions an Android 15 emulator, installs UiAutomator2, starts Appium, and runs the same WebdriverIO suite. It runs on pull requests that touch the mobile or E2E surface and can also be started manually from the Actions tab.
+
+For the full authenticated booking path, configure these repository or environment secrets:
+
+- `KEVESTA_API_URL`: reachable KEVESTA API base URL
+- `KEVESTA_E2E_EMAIL`: verified test account email
+- `KEVESTA_E2E_PASSWORD`: test account password
+- `KEVESTA_E2E_ORIGIN`: optional origin airport, default `JFK`
+- `KEVESTA_E2E_DESTINATION`: optional destination airport, default `LHR`
+
+Without the credentials, the workflow still provisions the emulator and runs the unauthenticated login-validation smoke test; the authenticated flow skips intentionally. Appium logs and test results are uploaded as the `mobile-android-e2e-logs` workflow artifact, including on failure.
