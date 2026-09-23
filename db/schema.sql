@@ -194,3 +194,63 @@ create table if not exists calendar_sync_events (
   synced_at timestamptz not null default now(),
   unique (booking_id, provider)
 );
+
+
+-- KEVESTA unified trip workspace
+create table if not exists trips (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references users(id) on delete cascade,
+  name text not null,
+  destination text,
+  start_date date,
+  end_date date,
+  country_code text,
+  cover_image text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists trips_owner_idx on trips(owner_id, updated_at desc);
+create table if not exists trip_members (
+  id uuid primary key default gen_random_uuid(), trip_id uuid not null references trips(id) on delete cascade,
+  user_id uuid references users(id) on delete cascade, email text not null, name text,
+  role text not null default 'traveler' check (role in ('owner', 'traveler')),
+  invite_token text unique, status text not null default 'invited' check (status in ('invited', 'accepted')),
+  created_at timestamptz not null default now(), unique (trip_id, email)
+);
+create index if not exists trip_members_trip_idx on trip_members(trip_id);
+create table if not exists trip_stops (
+  id uuid primary key default gen_random_uuid(), trip_id uuid not null references trips(id) on delete cascade,
+  title text not null, description text, location text, start_at timestamptz, end_at timestamptz,
+  category text not null default 'place', position integer not null default 0,
+  created_by uuid references users(id) on delete set null, created_at timestamptz not null default now()
+);
+create index if not exists trip_stops_trip_idx on trip_stops(trip_id, position, start_at);
+create table if not exists trip_documents (
+  id uuid primary key default gen_random_uuid(), trip_id uuid not null references trips(id) on delete cascade,
+  title text not null, document_type text not null default 'other', file_url text, reference text, expires_at date,
+  created_by uuid references users(id) on delete set null, created_at timestamptz not null default now()
+);
+create index if not exists trip_documents_trip_idx on trip_documents(trip_id, created_at desc);
+create table if not exists trip_expenses (
+  id uuid primary key default gen_random_uuid(), trip_id uuid not null references trips(id) on delete cascade,
+  description text not null, amount_cents integer not null check (amount_cents >= 0), currency text not null default 'USD',
+  paid_by uuid references users(id) on delete set null, split_type text not null default 'equal' check (split_type in ('equal', 'custom')),
+  created_at timestamptz not null default now()
+);
+create index if not exists trip_expenses_trip_idx on trip_expenses(trip_id, created_at desc);
+create table if not exists trip_notes (
+  id uuid primary key default gen_random_uuid(), trip_id uuid not null references trips(id) on delete cascade,
+  title text not null, body text not null, created_by uuid references users(id) on delete set null,
+  created_at timestamptz not null default now(), updated_at timestamptz not null default now()
+);
+create index if not exists trip_notes_trip_idx on trip_notes(trip_id, updated_at desc);
+create table if not exists trip_links (
+  id uuid primary key default gen_random_uuid(), trip_id uuid not null references trips(id) on delete cascade,
+  title text not null, url text not null, created_by uuid references users(id) on delete set null, created_at timestamptz not null default now()
+);
+create index if not exists trip_links_trip_idx on trip_links(trip_id, created_at desc);
+create table if not exists trip_photos (
+  id uuid primary key default gen_random_uuid(), trip_id uuid not null references trips(id) on delete cascade,
+  url text not null, caption text, created_by uuid references users(id) on delete set null, created_at timestamptz not null default now()
+);
+create index if not exists trip_photos_trip_idx on trip_photos(trip_id, created_at desc);

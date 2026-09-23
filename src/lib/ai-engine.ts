@@ -254,3 +254,26 @@ export async function generateSupportResponse(
     canAutoResolve,
   };
 }
+
+
+export type ItineraryPlanStop = {
+  title: string;
+  description: string;
+  location: string;
+  category: "food" | "culture" | "nature" | "transport" | "stay" | "place";
+  timeOfDay: "morning" | "afternoon" | "evening";
+};
+
+export async function generateItineraryPlan(query: string, countryCode: string): Promise<{ stops: ItineraryPlanStop[]; travelContext: string }> {
+  const cleanQuery = query.trim().slice(0, 1800);
+  const guidance = await generateTravelResponse(cleanQuery, countryCode, []);
+  const parts = cleanQuery.split(/\n|,|;| then | and then /i).map((part) => part.trim()).filter(Boolean).slice(0, 10);
+  const fallback = parts.length ? parts : ["Arrive and settle in", "Explore a local neighborhood", "Enjoy a memorable local meal"];
+  const stops = fallback.map((item, index) => {
+    const lower = item.toLowerCase();
+    const category: ItineraryPlanStop["category"] = /eat|food|coffee|restaurant|market|dinner|lunch/.test(lower) ? "food" : /museum|gallery|historic|castle|temple|culture/.test(lower) ? "culture" : /park|beach|hike|garden|sunset|nature/.test(lower) ? "nature" : /flight|train|airport|transfer|arrive/.test(lower) ? "transport" : /hotel|stay|check in|check-in/.test(lower) ? "stay" : "place";
+    const timeOfDay: ItineraryPlanStop["timeOfDay"] = index % 3 === 0 ? "morning" : index % 3 === 1 ? "afternoon" : "evening";
+    return { title: item.charAt(0).toUpperCase() + item.slice(1), description: `KEVESTA suggestion for your ${timeOfDay}. Use local context to shape the details when you arrive.`, location: countryCode, category, timeOfDay };
+  });
+  return { stops, travelContext: guidance.content.slice(0, 1200) };
+}

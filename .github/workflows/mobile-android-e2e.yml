@@ -1,0 +1,84 @@
+name: Mobile Android E2E
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "mobile/**"
+      - "e2e/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/mobile-android-e2e.yml"
+
+jobs:
+  android-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      EXPO_PUBLIC_API_URL: ${{ secrets.KEVESTA_API_URL }}
+      E2E_EMAIL: ${{ secrets.KEVESTA_E2E_EMAIL }}
+      E2E_PASSWORD: ${{ secrets.KEVESTA_E2E_PASSWORD }}
+      E2E_ORIGIN: ${{ secrets.KEVESTA_E2E_ORIGIN || 'JFK' }}
+      E2E_DESTINATION: ${{ secrets.KEVESTA_E2E_DESTINATION || 'LHR' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm --prefix mobile ci
+
+      - name: Install Appium UiAutomator2
+        run: npx appium driver install uiautomator2
+
+      - name: Generate Android project
+        working-directory: mobile
+        run: npx expo prebuild --platform android --non-interactive --no-install
+
+      - name: Build debug APK
+        working-directory: mobile/android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Run Appium tests on Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          MOBILE_APP_PATH: ${{ github.workspace }}/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          MOBILE_APP_PACKAGE: com.kevesta.app
+          MOBILE_PLATFORM: Android
+          APPIUM_EXTERNAL: "1"
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: Pixel_6
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          disable-animations: true
+          script: |
+            adb install -r "$MOBILE_APP_PATH"
+            npx appium --base-path / --address 127.0.0.1 --port 4723 > "$GITHUB_WORKSPACE/appium.log" 2>&1 &
+            for i in {1..30}; do curl --silent --fail http://127.0.0.1:4723/status && break || sleep 1; done
+            npm run mobile:e2e:android
+
+      - name: Upload Appium logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-android-e2e-logs
+          path: |
+            appium.log
+            test-results/
+          if-no-files-found: ignore
