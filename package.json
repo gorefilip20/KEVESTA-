@@ -12,6 +12,7 @@
     "test:e2e": "playwright test",
     "test:email": "tsx scripts/test-email-delivery.ts",
     "test:integration:local": "start-server-and-test \"tsx scripts/local-stack.ts\" http://127.0.0.1:3001 \"LOCAL_INTEGRATION=1 playwright test tests/payments.spec.ts --project=chromium\"",
+    "test:integration:trips": "start-server-and-test \"tsx scripts/local-stack.ts\" http://127.0.0.1:3001 \"LOCAL_INTEGRATION=1 playwright test tests/trips.spec.ts --project=chromium\"",
     "mobile:e2e": "wdio run e2e/wdio.conf.cjs",
     "mobile:e2e:android": "MOBILE_PLATFORM=Android npm run mobile:e2e",
     "mobile:e2e:ios": "MOBILE_PLATFORM=iOS npm run mobile:e2e"

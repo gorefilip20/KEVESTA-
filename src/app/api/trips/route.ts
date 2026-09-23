@@ -32,7 +32,11 @@ export async function PUT(request: NextRequest) {
     if (!access.rowCount) return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     if (action === "invite") {
       const email = String(body.email || "").trim().toLowerCase(); if (!email.includes("@")) return NextResponse.json({ error: "Valid email required" }, { status: 400 });
-      const inviteToken = crypto.randomBytes(18).toString("hex"); const result = await query("insert into trip_members (trip_id,email,role,invite_token) values ($1,$2,'traveler',$3) on conflict (trip_id,email) do update set invite_token=excluded.invite_token, status='invited' returning id,email,invite_token,status", [tripId, email, inviteToken]);
+      const inviteToken = crypto.randomBytes(18).toString("hex");
+      const existing = await query("select id from trip_members where trip_id=$1 and email=$2 limit 1", [tripId, email]);
+      const result = existing.rowCount
+        ? await query("update trip_members set invite_token=$1, status='invited' where id=$2 returning id,email,invite_token,status", [inviteToken, existing.rows[0].id])
+        : await query("insert into trip_members (id,trip_id,email,role,invite_token) values ($1,$2,$3,'traveler',$4) returning id,email,invite_token,status", [crypto.randomUUID(), tripId, email, inviteToken]);
       return NextResponse.json({ member: result.rows[0], inviteUrl: `/trip/invite/${inviteToken}` }, { status: 201 });
     }
     if (action === "stop") { const result = await query("insert into trip_stops (trip_id,title,description,location,start_at,end_at,category,created_by) values ($1,$2,$3,$4,$5,$6,$7,$8) returning *", [tripId, body.title, body.description || null, body.location || null, body.startAt || null, body.endAt || null, body.category || "place", user.id]); return NextResponse.json({ stop: result.rows[0] }, { status: 201 }); }
@@ -56,5 +60,5 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ stops: created, travelContext: plan.travelContext, message: "KEVESTA AI turned your ideas into an editable itinerary." }, { status: 201 });
     }
     return NextResponse.json({ error: "Unsupported trip action" }, { status: 400 });
-  } catch { return NextResponse.json({ error: "Trip update could not be saved" }, { status: 503 }); }
+  } catch (error) { console.error("Trip update failed", error); return NextResponse.json({ error: "Trip update could not be saved" }, { status: 503 }); }
 }
